@@ -7,9 +7,17 @@ window.offlineReady = (async () => {
       throw new Error("Use HTTPS or localhost in a browser supporting offline apps.");
     }
     const setup = async () => {
-      await navigator.serviceWorker.register("./sw.js");
-      const registration = await navigator.serviceWorker.ready;
+      // Reuse the installed controller first. Safari may fetch sw.js during register(),
+      // which can fail and raise a network prompt on an otherwise cached offline launch.
       if (!navigator.serviceWorker.controller) {
+        const existing = await navigator.serviceWorker.getRegistration("./");
+        if (!existing?.active) {
+          if (navigator.onLine === false) {
+            throw new Error("No installed offline worker is available. Open this app online once to finish setup.");
+          }
+          await navigator.serviceWorker.register("./sw.js");
+        }
+        await navigator.serviceWorker.ready;
         await new Promise(resolve => {
           const changed = () => {
             if (navigator.serviceWorker.controller) {
@@ -28,7 +36,7 @@ window.offlineReady = (async () => {
           event.data && event.data.ok ? resolve(event.data) : reject(new Error("Some offline files are missing. Reopen online to repair the cache."));
         };
         // Ask the worker actually controlling this page, not an unrelated waiting update.
-        navigator.serviceWorker.controller.postMessage({type: "CHECK_OFFLINE"}, [channel.port2]);
+        navigator.serviceWorker.controller.postMessage({type: "CHECK_OFFLINE", allowRepair: navigator.onLine !== false}, [channel.port2]);
       });
       return result;
     };

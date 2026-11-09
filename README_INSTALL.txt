@@ -25,7 +25,7 @@ LIMITATIONS:
 - PWA offline cache may be evicted by iOS. Verify offline access before relying on it.
 - All five built-in guides are bundled with the app. New imports are device-local only.
 
-LOCAL OFFLINE RELIABILITY REPAIR (not yet deployed)
+OFFLINE RELIABILITY REPAIR
 - The app now waits for its controlling service worker to verify every shell/data asset.
 - Missing cached assets are repaired when online; registration/setup failures are visible.
 - Navigation uses the cached shell first, including home-screen launches and query URLs.
@@ -40,3 +40,6 @@ Device acceptance: install/open while online; wait for verification; enable Airp
 with Wi-Fi disabled; fully close and reopen; search several guides, open copied text,
 restart the device and repeat. Repeat separately on every phone, tablet, and computer.
 Do not delete existing imports/site data to test. Keep original PDFs separately in Files.
+
+Offline launch reuses the installed worker without calling register again. A missing
+worker requires an online first setup; missing cache files are not repaired while offline.

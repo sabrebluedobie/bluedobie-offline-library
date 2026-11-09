@@ -1,4 +1,4 @@
-const CACHE = 'bluedobie-library-static-v3';
+const CACHE = 'bluedobie-library-static-v4';
 const ASSETS = ['./index.html', './style.css', './app.js', './offline.js', './library.json', './manifest.webmanifest', './icon.png'];
 const assetURLs = ASSETS.map(path => new URL(path, self.registration.scope).href);
 self.addEventListener('install', event => {
@@ -16,7 +16,13 @@ self.addEventListener('message', event => {
       // Refill missing assets online; an offline failure must never claim readiness.
       const missing = [];
       for (const url of assetURLs) if (!(await cache.match(url))) missing.push(url);
-      if (missing.length) await cache.addAll(missing);
+      if (missing.length) {
+        if (event.data.allowRepair !== true) {
+          event.ports[0].postMessage({ok: false});
+          return;
+        }
+        await cache.addAll(missing);
+      }
       const complete = (await Promise.all(assetURLs.map(url => cache.match(url)))).every(Boolean);
       event.ports[0].postMessage({ok: complete, cache: CACHE});
     } catch (_) {
