@@ -1,5 +1,5 @@
 "use strict";
-const OFFLINE_BUILD = "2026-11-09.3";
+const OFFLINE_BUILD = "2026-11-09.4";
 const diagnostic = window.offlineDiagnostic = {
   build: OFFLINE_BUILD,
   page: window.location ? window.location.origin + window.location.pathname : "unknown",

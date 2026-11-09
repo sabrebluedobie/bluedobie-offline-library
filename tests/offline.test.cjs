@@ -9,7 +9,7 @@ function worker({fail=false}={}) {
   const handlers={}, files=new Map();let network=0;
   const cache={match:async key=>files.get(typeof key==='string'?key:key.url),addAll:async urls=>{if(fail)throw Error('offline');for(const u of urls)files.set(u,{ok:true,url:u})},put:async(k,v)=>files.set(k.url||k,v)};
   const scope='https://example.test/bluedobie-offline-library/';
-  vm.runInNewContext(source('sw.js'),{URL,self:{registration:{scope},addEventListener:(n,f)=>handlers[n]=f,skipWaiting:async()=>{},clients:{claim:async()=>{}}},caches:{open:async()=>cache},fetch:async()=>{network++;throw Error('network unavailable')}});
+  vm.runInNewContext(source('sw.js'),{URL,Response,self:{registration:{scope},addEventListener:(n,f)=>handlers[n]=f,skipWaiting:async()=>{},clients:{claim:async()=>{}}},caches:{open:async()=>cache},fetch:async()=>{network++;throw Error('network unavailable')}});
   const run=async(name,extra={})=>{let promise;handlers[name]({...extra,waitUntil:p=>promise=p,respondWith:p=>promise=p});return await promise};
   return {run,files,scope,network:()=>network};
 }
@@ -43,3 +43,24 @@ test('first online launch still installs worker',async()=>{const r=await readine
 test('offline cache check never tries to repair missing files over network',async()=>{const w=worker();let result;await w.run('message',{data:{type:'CHECK_OFFLINE',allowRepair:false},ports:[{postMessage:r=>result=r}]});assert.equal(result.ok,false);assert.equal(w.files.size,0)});
 
 test('pending installation is not mistaken for missing registration offline',async()=>{const r=await readiness({online:false,controlled:false,existingPending:true,registrationFails:true});assert.equal(r.ok,true);assert.equal(r.registerCalls,0)});
+
+test('PDF navigation is never replaced by the HTML shell',async()=>{const w=worker();await w.run('install');const url=w.scope+'originals/test.pdf';w.files.set(url,new Response('%PDF-test',{headers:{'Content-Type':'application/pdf'}}));const r=await w.run('fetch',{request:{url,mode:'navigate',method:'GET'}});assert.equal(await r.text(),'%PDF-test')});
+test('cached PDFs support bounded, suffix, open and invalid byte ranges',async()=>{for(const [range,status,expected] of [['bytes=2-4',206,'DF-'],['bytes=-4',206,'test'],['bytes=5-',206,'test'],['bytes=20-',416,''],['bytes=3-1',416,''],['bytes=0-1,4-5',416,'']]){const w=worker();const url=w.scope+'originals/test.pdf';w.files.set(url,new Response('%PDF-test'));const r=await w.run('fetch',{request:{url,mode:'navigate',method:'GET',headers:new Headers({Range:range})}});assert.equal(r.status,status);assert.equal(await r.text(),expected);assert.equal(w.network(),0)}});
+test('missing offline PDF returns a clear error rather than the shell',async()=>{const w=worker();await w.run('install');const r=await w.run('fetch',{request:{url:w.scope+'originals/missing.pdf',mode:'navigate',method:'GET'}});assert.equal(r.status,503);assert.match(await r.text(),/not saved/)});
+test('unknown navigation is not silently rewritten to app shell',async()=>{const w=worker();await w.run('install');await assert.rejects(w.run('fetch',{request:{url:w.scope+'missing.html',mode:'navigate',method:'GET'}}))});
+async function verifyOriginal(data,item){
+  const context={window:{},document:{getElementById:()=>({textContent:''})},fetch:async()=>{throw Error('test only')},Response,TextDecoder,crypto:require('node:crypto').webcrypto};
+  vm.runInNewContext(source('originals.js'),context);
+  return context.verifiedPDF(new Response(data),item);
+}
+test('original verifier accepts exact PDF and rejects partial or altered bytes',async()=>{
+  const data='%PDF-safe';const item={bytes:data.length,sha256:require('node:crypto').createHash('sha256').update(data).digest('hex')};
+  assert.equal(await (await verifyOriginal(data,item)).text(),data);
+  await assert.rejects(verifyOriginal('%PDF-',item),/size mismatch/);
+  await assert.rejects(verifyOriginal('%PDF-evil',item),/match the verified source/);
+  await assert.rejects(verifyOriginal('<html>bad',item),/not a PDF/);
+});
+test('every local original matches its manifest size and hash',()=>{for(const d of JSON.parse(source('originals.json'))){const data=fs.readFileSync(path.join(root,d.path));assert.equal(data.length,d.bytes);assert.equal(require('node:crypto').createHash('sha256').update(data).digest('hex'),d.sha256)}});
+test('worker does not delete older caches or duplicate original PDFs in shell',()=>{assert.doesNotMatch(source('sw.js'),/caches\.delete/);assert.doesNotMatch(source('sw.js').split('const assetURLs')[0],/originals\/.*pdf/)});
+
+test('release includes exactly the complete USDA set and no held sources',()=>{const a=JSON.parse(source('originals.json'));assert.deepEqual(a.map(d=>d.guide).sort((a,b)=>a-b),[0,1,2,3,4,5,6,7]);assert.equal(a.length,8);for(const d of a)assert.match(d.source,/^https:\/\/nchfp\.uga\.edu\/papers\/guide\//)});

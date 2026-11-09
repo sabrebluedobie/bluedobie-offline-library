@@ -43,3 +43,13 @@ Do not delete existing imports/site data to test. Keep original PDFs separately 
 
 Offline launch reuses the installed worker without calling register again. A missing
 worker requires an online first setup; missing cache files are not repaired while offline.
+
+
+Original PDFs release (November 9, 2026)
+The original-PDF section contains USDA's Complete Guide to Home Canning, 2015 revision: Introduction and Guides 1–7, unchanged from official NCHFP files. Search currently covers extracted Guides 1–5 only. Introduction and Guides 6–7 are PDF-only; they have not yet been added to keyword search.
+
+Save each needed PDF separately on EACH device. Downloads are checked against byte size and SHA-256 before offline verification. App-shell readiness does not mean every PDF is saved. Full originals total about 13.52 MiB, in addition to the small search app. Browser quota estimates are not promises of storage availability or permanence. Save independent copies in On My iPad/iPhone or your computer's local Files.
+
+Preserve source credits and dates. Source URLs/hashes are in originals.json. USDA/NAL public-domain policy: https://www.nal.usda.gov/exhibits/ipd/canning/about . No USDA endorsement is implied. These are the 2015 originals, not a newly issued edition. Table text extraction can be damaged; use original tables and complete procedures, and verify current authoritative updates before safety-critical use.
+
+Verification limits: automated cache/range/hash tests passed. Mac showed the original PDF and later table page with the local origin server stopped. That is not a complete network-offline test: browser PDF extensions may use outside resources. Actual iPad/phone Airplane Mode cold-launch, later-page navigation and independent Files-copy tests remain required. No AI integration is added.
