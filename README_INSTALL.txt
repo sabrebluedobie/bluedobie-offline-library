@@ -7,7 +7,8 @@ IMPORTANT: A ZIP opened in iOS Files is NOT an installable PWA. To install as an
 1. Upload the unzipped folder contents to an HTTPS static hosting service, preserving paths.
    GitHub Pages or Cloudflare Pages can host it on a free plan (subject to their terms).
 2. Visit the HTTPS URL in Safari on your iPad or iPhone while online.
-3. Wait for the status to show "Ready" and let the page finish loading.
+3. Wait for "Offline files verified on this device". If offline verification fails,
+   stay online and reload; do not rely on the app until verification succeeds.
 4. In Safari choose Share > Add to Home Screen > Add.
 5. Launch the Home Screen app while online once.
 6. Enable Airplane Mode, fully close and reopen the app, then search for venison.
@@ -23,3 +24,19 @@ LIMITATIONS:
 - Clearing Safari/site data or device storage pressure can delete imported guides.
 - PWA offline cache may be evicted by iOS. Verify offline access before relying on it.
 - All five built-in guides are bundled with the app. New imports are device-local only.
+
+LOCAL OFFLINE RELIABILITY REPAIR (not yet deployed)
+- The app now waits for its controlling service worker to verify every shell/data asset.
+- Missing cached assets are repaired when online; registration/setup failures are visible.
+- Navigation uses the cached shell first, including home-screen launches and query URLs.
+- Older cache generations are retained to avoid deleting resources under open tabs.
+- Cache verification is a point-in-time check, not a guarantee against later storage eviction.
+- After an update, close/reopen or reload online before testing the new version offline.
+
+Developer checks: node --test tests/offline.test.cjs
+Also run: node --check app.js; node --check offline.js; node --check sw.js
+These automated tests simulate browser APIs. They do not certify Safari/iOS behavior.
+Device acceptance: install/open while online; wait for verification; enable Airplane Mode
+with Wi-Fi disabled; fully close and reopen; search several guides, open copied text,
+restart the device and repeat. Repeat separately on every phone, tablet, and computer.
+Do not delete existing imports/site data to test. Keep original PDFs separately in Files.
