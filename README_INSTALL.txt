@@ -1,6 +1,6 @@
 BLUEDOBIE OFFLINE LIBRARY - VERSION 1
 ====================================
-INCLUDED: USDA Home Canning Guides 1 through 5 as searchable TXT sections.
+INCLUDED: USDA Home Canning Introduction and Guides 1 through 7 as searchable text.
 NO subscriptions, cloud API, remote AI, or network needed after installation and caching.
 
 IMPORTANT: A ZIP opened in iOS Files is NOT an installable PWA. To install as an app:
@@ -23,7 +23,7 @@ LIMITATIONS:
 - TXT extraction can corrupt tables. Always verify safety-critical numbers against the original USDA PDF.
 - Clearing Safari/site data or device storage pressure can delete imported guides.
 - PWA offline cache may be evicted by iOS. Verify offline access before relying on it.
-- All five built-in guides are bundled with the app. New imports are device-local only.
+- All built-in guides are bundled with the app. New imports are device-local only.
 
 OFFLINE RELIABILITY REPAIR
 - The app now waits for its controlling service worker to verify every shell/data asset.
@@ -46,10 +46,12 @@ worker requires an online first setup; missing cache files are not repaired whil
 
 
 Original PDFs release (November 9, 2026)
-The original-PDF section contains USDA's Complete Guide to Home Canning, 2015 revision: Introduction and Guides 1–7, unchanged from official NCHFP files. Search currently covers extracted Guides 1–5 only. Introduction and Guides 6–7 are PDF-only; they have not yet been added to keyword search.
+The original-PDF section contains USDA's Complete Guide to Home Canning, 2015 revision: Introduction and Guides 1–7, unchanged from official NCHFP files. Search includes Introduction and Guides 6–7 as page-preserving layout extraction with PDF page links. This is a search aid, not a certified transcription. Table columns, footnotes and cross-page procedures must be checked in the original. No clinical or food-safety review is implied.
 
 Save each needed PDF separately on EACH device. Downloads are checked against byte size and SHA-256 before offline verification. App-shell readiness does not mean every PDF is saved. Full originals total about 13.52 MiB, in addition to the small search app. Browser quota estimates are not promises of storage availability or permanence. Save independent copies in On My iPad/iPhone or your computer's local Files.
 
 Preserve source credits and dates. Source URLs/hashes are in originals.json. USDA/NAL public-domain policy: https://www.nal.usda.gov/exhibits/ipd/canning/about . No USDA endorsement is implied. These are the 2015 originals, not a newly issued edition. Table text extraction can be damaged; use original tables and complete procedures, and verify current authoritative updates before safety-critical use.
 
 Verification limits: automated cache/range/hash tests passed. Mac showed the original PDF and later table page with the local origin server stopped. That is not a complete network-offline test: browser PDF extensions may use outside resources. Actual iPad/phone Airplane Mode cold-launch, later-page navigation and independent Files-copy tests remain required. No AI integration is added.
+
+Search update: Introduction and Guides 6–7 are indexed by PDF page. Results deliberately show matching terms and an original-page link, not extracted instructions or Copy for Gemma: validation found corrupted source text layers. This enables finding passages without claiming a reliable transcription. Guides 1–5 retain legacy text and safety warnings.

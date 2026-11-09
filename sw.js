@@ -1,4 +1,4 @@
-const CACHE = 'bluedobie-library-static-v8';
+const CACHE = 'bluedobie-library-static-v9';
 const ASSETS = ['./index.html', './style.css', './app.js', './offline.js', './library.json', './manifest.webmanifest', './icon.png', './originals.json', './originals.js', './viewer.html', './viewer.css', './viewer.js'];
 const assetURLs = ASSETS.map(path => new URL(path, self.registration.scope).href);
 self.addEventListener('install', event => {

@@ -68,3 +68,16 @@ test('release includes exactly the complete USDA set and no held sources',()=>{c
 test('document screen query navigation works without network',async()=>{const w=worker();await w.run('install');for(const path of ['viewer.html?doc=usda-5','viewer.css','viewer.js']){const r=await w.run('fetch',{request:{url:w.scope+path,mode:path.startsWith('viewer.html')?'navigate':'cors',method:'GET'}});assert.ok(r.ok)}assert.equal(w.network(),0)});
 test('PDF links stay within app document screen',()=>{assert.match(source('app.js'),/viewer\.html\?doc=/);assert.match(source('originals.js'),/viewer\.html\?doc=/);assert.doesNotMatch(source('app.js')+source('originals.js'),/target='_blank'/);assert.match(source('viewer.html'),/id="back-library" href="\.\/index\.html"/)});
 test('viewer does not use query parameters as arbitrary PDF URLs',()=>{const context={document:{getElementById:()=>({})},fetch:async()=>{throw Error('test')}};vm.runInNewContext(source('viewer.js'),context);assert.equal(context.chooseDocument([{id:'bad',path:'https://attacker.invalid/x.pdf'}],'bad'),undefined);assert.equal(context.chooseDocument([{id:'good',path:'originals/'+'a'.repeat(64)+'.pdf'}],'good').id,'good')});
+
+
+test('new USDA page search records retain provenance and source page bounds',()=>{
+ const docs=JSON.parse(source('originals.json'));const pages=JSON.parse(source('library.json')).filter(x=>x.pdfPage);
+ assert.equal(pages.length,59);
+ for(const p of pages){const d=docs.find(d=>d.id===p.originalId);assert.ok(d);assert.ok(p.pdfPage>=1&&p.pdfPage<=d.pages);assert.equal(p.sourceSha256,d.sha256);assert.equal(p.source,d.source);assert.ok(p.text.trim());}
+ for(const [id,word] of [['usda-6','sauerkraut'],['usda-7','pectin'],['usda-0','canning']])assert.ok(pages.some(p=>p.originalId===id&&p.text.toLowerCase().includes(word)));
+});
+test('unreliable new page extraction is a locator, never copied safety instructions',()=>{
+ assert.match(source('app.js'),/if\(!h.d.pdfPage\)actions.append\(copy\)/);
+ assert.match(source('app.js'),/Extracted instructions are withheld/);
+ assert.match(source('viewer.js'),/page<=item.pages/);
+});
