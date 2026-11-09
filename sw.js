@@ -1,5 +1,5 @@
-const CACHE = 'bluedobie-library-static-v7';
-const ASSETS = ['./index.html', './style.css', './app.js', './offline.js', './library.json', './manifest.webmanifest', './icon.png', './originals.json', './originals.js'];
+const CACHE = 'bluedobie-library-static-v8';
+const ASSETS = ['./index.html', './style.css', './app.js', './offline.js', './library.json', './manifest.webmanifest', './icon.png', './originals.json', './originals.js', './viewer.html', './viewer.css', './viewer.js'];
 const assetURLs = ASSETS.map(path => new URL(path, self.registration.scope).href);
 self.addEventListener('install', event => {
   event.waitUntil(caches.open(CACHE).then(cache => cache.addAll(assetURLs)).then(() => self.skipWaiting()));
@@ -46,7 +46,9 @@ self.addEventListener('fetch', event => {
       if (saved) return pdfRange(saved, request.headers?.get('Range'));
       try { return await fetch(request); } catch (_) { return new Response('Original not saved on this device. Open the library online and save it first.', {status:503,headers:{'Content-Type':'text/plain'}}); }
     }
-    const key = request.mode === 'navigate' && isShell ? assetURLs[0] : request;
+    const isViewer = url.pathname === shellPath + 'viewer.html';
+    const key = request.mode === 'navigate' && isShell ? assetURLs[0] :
+      isViewer ? new URL('./viewer.html', self.registration.scope).href : request;
     const cached = await cache.match(key);
     if (cached) return cached;
     const response = await fetch(request);

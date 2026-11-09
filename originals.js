@@ -31,7 +31,7 @@ async function showStorage() {
       title.textContent=item.title;
       note.textContent=`${item.edition} · ${item.pages} PDF pages · ${(item.bytes/1048576).toFixed(2)} MiB. ${item.source} ${item.rights} ${item.sourceReview||""}`;
       status.setAttribute('role','status'); button.textContent='Save verified original offline';
-      link.href=url;link.target='_blank';link.rel='noopener';link.textContent='Open original PDF';link.hidden=true;
+      link.href='./viewer.html?doc='+encodeURIComponent(item.id);link.textContent='Open original PDF';link.hidden=true;
       async function check(){
         try{await verifiedPDF(await cache.match(url),item);status.textContent='Original verified in this device’s storage. Test opening it in Airplane Mode.';link.hidden=false;button.textContent='Verify / save original again';}
         catch(e){status.textContent='Original is not verified offline on this device.';link.hidden=true;}
