@@ -63,7 +63,7 @@ test('original verifier accepts exact PDF and rejects partial or altered bytes',
 test('every local original matches its manifest size and hash',()=>{for(const d of JSON.parse(source('originals.json'))){const data=fs.readFileSync(path.join(root,d.path));assert.equal(data.length,d.bytes);assert.equal(require('node:crypto').createHash('sha256').update(data).digest('hex'),d.sha256)}});
 test('worker does not delete older caches or duplicate original PDFs in shell',()=>{assert.doesNotMatch(source('sw.js'),/caches\.delete/);assert.doesNotMatch(source('sw.js').split('const assetURLs')[0],/originals\/.*pdf/)});
 
-test('release includes exactly the complete USDA set and no held sources',()=>{const a=JSON.parse(source('originals.json'));assert.deepEqual(a.map(d=>d.guide).sort((a,b)=>a-b),[0,1,2,3,4,5,6,7]);assert.equal(a.length,8);for(const d of a)assert.match(d.source,/^https:\/\/nchfp\.uga\.edu\/papers\/guide\//)});
+test('release includes exactly the complete USDA set and no held sources',()=>{const a=JSON.parse(source('originals.json')).filter(d=>Number.isInteger(d.guide));assert.deepEqual(a.map(d=>d.guide).sort((a,b)=>a-b),[0,1,2,3,4,5,6,7]);assert.equal(a.length,8);for(const d of a)assert.match(d.source,/^https:\/\/nchfp\.uga\.edu\/papers\/guide\//)});
 
 test('document screen query navigation works without network',async()=>{const w=worker();await w.run('install');for(const path of ['viewer.html?doc=usda-5','viewer.css','viewer.js']){const r=await w.run('fetch',{request:{url:w.scope+path,mode:path.startsWith('viewer.html')?'navigate':'cors',method:'GET'}});assert.ok(r.ok)}assert.equal(w.network(),0)});
 test('PDF links stay within app document screen',()=>{assert.match(source('app.js'),/viewer\.html\?doc=/);assert.match(source('originals.js'),/viewer\.html\?doc=/);assert.doesNotMatch(source('app.js')+source('originals.js'),/target='_blank'/);assert.match(source('viewer.html'),/id="back-library" href="\.\/index\.html"/)});
@@ -71,7 +71,7 @@ test('viewer does not use query parameters as arbitrary PDF URLs',()=>{const con
 
 
 test('new USDA page search records retain provenance and source page bounds',()=>{
- const docs=JSON.parse(source('originals.json'));const pages=JSON.parse(source('library.json')).filter(x=>x.pdfPage);
+ const docs=JSON.parse(source('originals.json'));const pages=JSON.parse(source('library.json')).filter(x=>x.pdfPage&&x.originalId.startsWith('usda-'));
  assert.equal(pages.length,59);
  for(const p of pages){const d=docs.find(d=>d.id===p.originalId);assert.ok(d);assert.ok(p.pdfPage>=1&&p.pdfPage<=d.pages);assert.equal(p.sourceSha256,d.sha256);assert.equal(p.source,d.source);assert.ok(p.text.trim());}
  for(const [id,word] of [['usda-6','sauerkraut'],['usda-7','pectin'],['usda-0','canning']])assert.ok(pages.some(p=>p.originalId===id&&p.text.toLowerCase().includes(word)));
@@ -79,5 +79,9 @@ test('new USDA page search records retain provenance and source page bounds',()=
 test('unreliable new page extraction is a locator, never copied safety instructions',()=>{
  assert.match(source('app.js'),/if\(!h.d.pdfPage\)actions.append\(copy\)/);
  assert.match(source('app.js'),/Extracted instructions are withheld/);
- assert.match(source('viewer.js'),/page<=item.pages/);
+ assert.match(source('viewer.js'),/validPage/);
 });
+
+test('reviewed reference release excludes held material and retains CDC notice',()=>{const docs=JSON.parse(source('originals.json')).filter(d=>!Number.isInteger(d.guide));assert.deepEqual(docs.map(d=>d.id).sort(),['cdc-emergency-water','cdc-handwashing','cdc-shelter-health','usgs-map-and-compass']);for(const d of docs){assert.ok(d.sourceReview);if(d.id.startsWith('cdc-'))assert.match(d.publicationNotice,/free of charge.*does not imply endorsement/)}const pages=JSON.parse(source('library.json')).filter(p=>p.pdfPage&&!p.originalId.startsWith('usda-'));assert.equal(pages.length,5);for(const p of pages){const d=docs.find(d=>d.id===p.originalId);assert.equal(p.sourceSha256,d.sha256);assert.ok(p.pdfPage<=d.pages)}});
+
+test('offline PDF renderer has bounded page controls and bundled assets',()=>{assert.doesNotMatch(source('viewer.html'),/<iframe/);for(const id of ['previous','next','go-page','pdf-canvas'])assert.ok(source('viewer.html').includes('id="'+id+'"'));assert.match(source('sw.js'),/vendor\/pdfjs\/pdf.worker.min.mjs/);assert.match(source('viewer.js'),/isEvalSupported:false/);});

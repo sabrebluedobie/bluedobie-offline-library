@@ -1,0 +1,1 @@
+PDF.js 6.5.438, official npm pdfjs-dist package. Apache-2.0. Bundled locally; no CDN or remote runtime dependencies.

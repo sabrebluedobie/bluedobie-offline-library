@@ -110,5 +110,61 @@
     "rights": "USDA-authored public-domain reference per National Agricultural Library policy, unless otherwise indicated. Preserve original credits and content; no USDA endorsement implied. https://www.nal.usda.gov/exhibits/ipd/canning/about",
     "retrieved": "2026-11-09",
     "sourceReview": "Official original downloaded and hash verified. Page-preserving searchable extraction available; extracted text is not a certified transcription. Check original tables and complete procedures."
+  },
+  {
+    "id": "cdc-emergency-water",
+    "title": "CDC: Make Water Safe During an Emergency",
+    "path": "originals/c39b55b4d8f3dd40ecd2b13175f7661b52dfc6e73e4a24ef189de64fb9d513b1.pdf",
+    "sha256": "c39b55b4d8f3dd40ecd2b13175f7661b52dfc6e73e4a24ef189de64fb9d513b1",
+    "bytes": 730926,
+    "pages": 1,
+    "edition": "CDC PDF modified October 2022; source landing August 2024",
+    "source": "https://www.cdc.gov/water-emergency/media/pdfs/make-water-safe-during-emergency-p.pdf",
+    "rights": "CDC; public-domain policy at https://www.cdc.gov/other/agencymaterials.html; preserve attribution and content, state freely available from CDC and no endorsement.",
+    "retrieved": "2026-11-09",
+    "sourceReview": "Original unchanged; reviewed source reference, not individualized advice. Boiling and disinfection cannot make water contaminated with harmful chemicals or toxins safe. Follow the complete CDC source. Do not combine dosing from different sources.",
+    "publicationNotice": "Source: U.S. Centers for Disease Control and Prevention (CDC). Original material is available free of charge from CDC at the source link. Reference to CDC does not imply endorsement of this library by CDC or the U.S. Government. Original PDF content is unchanged."
+  },
+  {
+    "id": "usgs-map-and-compass",
+    "title": "USGS: Finding Your Way with Map and Compass",
+    "path": "originals/bc476fdc38e0949f18941cf361242bce8f0c18583111ce7e10b06eb3fc569922.pdf",
+    "sha256": "bc476fdc38e0949f18941cf361242bce8f0c18583111ce7e10b06eb3fc569922",
+    "bytes": 204850,
+    "pages": 2,
+    "edition": "Historical guide; publication date not verified",
+    "source": "https://d9-wret.s3.us-west-2.amazonaws.com/assets/palladium/production/s3fs-public/atoms/files/Finding%20Your%20Way%20With%20Map%20and%20Compass.pdf",
+    "rights": "USGS item-level public domain: https://www.usgs.gov/media/files/finding-your-way-map-and-compass",
+    "retrieved": "2026-11-09",
+    "sourceReview": "Original unchanged; reviewed source reference, not individualized advice. Historical navigation reference, not current magnetic declination. Obtain current local map and declination before travel.",
+    "publicationNotice": "USGS public-domain reference. No USGS endorsement implied."
+  },
+  {
+    "id": "cdc-shelter-health",
+    "title": "CDC: Staying Healthy at a Disaster Shelter",
+    "path": "originals/a7250143ae3d7ee979a0bf499ef7dc0c19ede8f9b2170060257e2950e5e4fbcf.pdf",
+    "sha256": "a7250143ae3d7ee979a0bf499ef7dc0c19ede8f9b2170060257e2950e5e4fbcf",
+    "bytes": 319690,
+    "pages": 1,
+    "edition": "Landing page January 5, 2026; PDF metadata July 2025",
+    "source": "https://www.cdc.gov/natural-disasters/media/pdfs/2026/02/NCEH-Shelter-Material-P.pdf",
+    "rights": "CDC reuse policy https://www.cdc.gov/other/agencymaterials.html; unchanged content, attribution, free-source notice and nonendorsement required.",
+    "retrieved": "2026-11-09",
+    "sourceReview": "Original unchanged; reviewed source reference, not individualized advice. Communal shelter health, not shelter construction.",
+    "publicationNotice": "Source: U.S. Centers for Disease Control and Prevention (CDC). Original material is available free of charge from CDC at the source link. Reference to CDC does not imply endorsement of this library by CDC or the U.S. Government. Original PDF content is unchanged."
+  },
+  {
+    "id": "cdc-handwashing",
+    "title": "CDC: Wash Your Hands",
+    "path": "originals/afd3dbf6a5ac9e3e40c6d9ed4d3e00d0e6493a468db7c02c4f2aadbe9d394a03.pdf",
+    "sha256": "afd3dbf6a5ac9e3e40c6d9ed4d3e00d0e6493a468db7c02c4f2aadbe9d394a03",
+    "bytes": 282412,
+    "pages": 1,
+    "edition": "Landing page August 22, 2024; PDF 2017",
+    "source": "https://www.cdc.gov/water-emergency/media/pdfs/factsheet-wash-your-hands.pdf",
+    "rights": "CDC reuse policy https://www.cdc.gov/other/agencymaterials.html; unchanged content, attribution, free-source notice and nonendorsement required.",
+    "retrieved": "2026-11-09",
+    "sourceReview": "Original unchanged; reviewed source reference, not individualized advice. Preserve original health cautions and diagrams.",
+    "publicationNotice": "Source: U.S. Centers for Disease Control and Prevention (CDC). Original material is available free of charge from CDC at the source link. Reference to CDC does not imply endorsement of this library by CDC or the U.S. Government. Original PDF content is unchanged."
   }
 ]

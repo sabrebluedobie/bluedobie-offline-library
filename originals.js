@@ -29,7 +29,7 @@ async function showStorage() {
       const url=new URL(item.path,document.baseURI).href;
       const box=document.createElement('article'),title=document.createElement('h3'),note=document.createElement('p'),status=document.createElement('p'),button=document.createElement('button'),link=document.createElement('a');
       title.textContent=item.title;
-      note.textContent=`${item.edition} · ${item.pages} PDF pages · ${(item.bytes/1048576).toFixed(2)} MiB. ${item.source} ${item.rights} ${item.sourceReview||""}`;
+      note.textContent=`${item.edition} · ${item.pages} PDF pages · ${(item.bytes/1048576).toFixed(2)} MiB. ${item.source} ${item.rights} ${item.sourceReview||""} ${item.publicationNotice||""}`;
       status.setAttribute('role','status'); button.textContent='Save verified original offline';
       link.href='./viewer.html?doc='+encodeURIComponent(item.id);link.textContent='Open original PDF';link.hidden=true;
       async function check(){
