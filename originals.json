@@ -166,5 +166,33 @@
     "retrieved": "2026-11-09",
     "sourceReview": "Original unchanged; reviewed source reference, not individualized advice. Preserve original health cautions and diagrams.",
     "publicationNotice": "Source: U.S. Centers for Disease Control and Prevention (CDC). Original material is available free of charge from CDC at the source link. Reference to CDC does not imply endorsement of this library by CDC or the U.S. Government. Original PDF content is unchanged."
+  },
+  {
+    "id": "cdc-wound-care",
+    "title": "CDC: Emergency Wound Care After a Natural Disaster",
+    "path": "originals/ee9b0b61906c5a731d6d0a8ed6c3c5ebaddf9a11f6588219e2b2c9dee2f87a6f.pdf",
+    "sha256": "ee9b0b61906c5a731d6d0a8ed6c3c5ebaddf9a11f6588219e2b2c9dee2f87a6f",
+    "bytes": 352891,
+    "pages": 1,
+    "edition": "October 26, 2017; current CDC landing April 24, 2024",
+    "source": "https://stacks.cdc.gov/view/cdc/49402/cdc_49402_DS1.pdf",
+    "rights": "CDC Stacks explicitly identifies this exact item as Public Domain: https://stacks.cdc.gov/view/cdc/49402 . Retain original content and attribution. CDC reuse policy: https://www.cdc.gov/other/agencymaterials.html",
+    "retrieved": "2026-11-09",
+    "sourceReview": "Limited disaster wound-care reference, not a complete first-aid manual. Preserve the source\u2019s urgent medical-care, sepsis, embedded-object, bite, puncture and tetanus-evaluation warnings.",
+    "publicationNotice": "Source: U.S. Centers for Disease Control and Prevention (CDC). Original material is available free of charge from CDC at the source link. Reference to CDC does not imply endorsement of this library by CDC or the U.S. Government. Original PDF content is unchanged."
+  },
+  {
+    "id": "cdc-food-power-outage",
+    "title": "CDC: Eat Safe Food after a Power Outage",
+    "path": "originals/0982174617e2b3405e966b0b1dc2838e3ce92dfad3185da3d450b525a62a7ebf.pdf",
+    "sha256": "0982174617e2b3405e966b0b1dc2838e3ce92dfad3185da3d450b525a62a7ebf",
+    "bytes": 1675372,
+    "pages": 1,
+    "edition": "March 4, 2020; current CDC landing March 21, 2024",
+    "source": "https://stacks.cdc.gov/view/cdc/88473/cdc_88473_DS1.pdf",
+    "rights": "CDC Stacks explicitly identifies this exact item as Public Domain: https://stacks.cdc.gov/view/cdc/88473 . Retain original content and attribution. CDC reuse policy: https://www.cdc.gov/other/agencymaterials.html",
+    "retrieved": "2026-11-09",
+    "sourceReview": "Outage-time estimates depend on closed doors and cold-temperature conditions. Do not treat them as permission to hold food at unsafe temperatures. Never taste food to test safety; normal smell does not establish safety. Read the entire original.",
+    "publicationNotice": "Source: U.S. Centers for Disease Control and Prevention (CDC). Original material is available free of charge from CDC at the source link. Reference to CDC does not imply endorsement of this library by CDC or the U.S. Government. Original PDF content is unchanged."
   }
 ]
