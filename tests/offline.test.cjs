@@ -82,6 +82,19 @@ test('unreliable new page extraction is a locator, never copied safety instructi
  assert.match(source('viewer.js'),/validPage/);
 });
 
-test('reviewed reference release excludes held material and retains CDC notice',()=>{const docs=JSON.parse(source('originals.json')).filter(d=>!Number.isInteger(d.guide));assert.deepEqual(docs.map(d=>d.id).sort(),['cdc-emergency-water','cdc-food-power-outage','cdc-handwashing','cdc-shelter-health','cdc-wound-care','usgs-map-and-compass']);for(const d of docs){assert.ok(d.sourceReview);if(d.id.startsWith('cdc-'))assert.match(d.publicationNotice,/free of charge.*does not imply endorsement/)}const pages=JSON.parse(source('library.json')).filter(p=>p.pdfPage&&!p.originalId.startsWith('usda-'));assert.equal(pages.length,7);for(const p of pages){const d=docs.find(d=>d.id===p.originalId);assert.equal(p.sourceSha256,d.sha256);assert.ok(p.pdfPage<=d.pages)}});
+test('reviewed reference release excludes held material and retains CDC notice',()=>{const docs=JSON.parse(source('originals.json')).filter(d=>!Number.isInteger(d.guide)&&!['cdc-diabetes-emergencies','cdc-emergency-insulin','cdc-diabetic-ketoacidosis','fda-emergency-insulin','fda-insulin-products'].includes(d.id));assert.deepEqual(docs.map(d=>d.id).sort(),['cdc-emergency-water','cdc-food-power-outage','cdc-handwashing','cdc-shelter-health','cdc-wound-care','ifrc-shelter-safety','usgs-map-and-compass']);for(const d of docs){assert.ok(d.sourceReview);if(d.id.startsWith('cdc-'))assert.match(d.publicationNotice,/free of charge.*does not imply endorsement/)}const pages=JSON.parse(source('library.json')).filter(p=>p.pdfPage&&docs.some(d=>d.id===p.originalId));assert.equal(pages.length,65);for(const p of pages){const d=docs.find(d=>d.id===p.originalId);assert.equal(p.sourceSha256,d.sha256);assert.ok(p.pdfPage<=d.pages)}});
 
 test('offline PDF renderer has bounded page controls and bundled assets',()=>{assert.doesNotMatch(source('viewer.html'),/<iframe/);for(const id of ['previous','next','go-page','pdf-canvas'])assert.ok(source('viewer.html').includes('id="'+id+'"'));assert.match(source('sw.js'),/vendor\/pdfjs\/pdf.worker.min.mjs/);assert.match(source('viewer.js'),/isEvalSupported:false/);});
+
+
+test('IFRC handbook keeps noncommercial attribution and page-linked search',()=>{
+ const docs=JSON.parse(source('originals.json')),d=docs.find(d=>d.id==='ifrc-shelter-safety');
+ assert.equal(d.pages,62);assert.match(d.rights,/noncommercial/);assert.match(d.rights,/2011/);assert.match(d.source,/^https:\/\/www.ifrc.org\//);
+ const pages=JSON.parse(source('library.json')).filter(p=>p.originalId===d.id);
+ assert.equal(pages.length,58);assert.equal(new Set(pages.map(p=>p.pdfPage)).size,58);
+ for(const p of pages){assert.ok(p.pdfPage>=1&&p.pdfPage<=62);assert.equal(p.sourceSha256,d.sha256);assert.equal(p.source,d.source);assert.ok(p.text.trim());assert.match(p.extraction,/locator/)}
+ for(const term of ['earthquake','flood','fire','wind'])assert.ok(pages.some(p=>p.text.toLowerCase().includes(term)));
+ assert.match(source('index.html'),/noncommercial use with attribution/);
+});
+
+ test('diabetes references preserve provenance and safe page locators',()=>{const ds=JSON.parse(source('originals.json')).filter(d=>['cdc-diabetes-emergencies','cdc-emergency-insulin','cdc-diabetic-ketoacidosis','fda-emergency-insulin','fda-insulin-products'].includes(d.id));assert.equal(ds.length,5);const ps=JSON.parse(source('library.json')).filter(p=>ds.some(d=>d.id===p.originalId));assert.equal(ps.length,33);for(const d of ds){assert.match(d.sourceReview,/product-specific/);assert.match(d.publicationNotice,/does not imply endorsement/)}for(const p of ps){const d=ds.find(d=>d.id===p.originalId);assert.ok(p.pdfPage>=1&&p.pdfPage<=d.pages);assert.equal(p.sourceSha256,d.sha256);assert.match(p.extraction,/locator/);}});

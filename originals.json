@@ -178,7 +178,7 @@
     "source": "https://stacks.cdc.gov/view/cdc/49402/cdc_49402_DS1.pdf",
     "rights": "CDC Stacks explicitly identifies this exact item as Public Domain: https://stacks.cdc.gov/view/cdc/49402 . Retain original content and attribution. CDC reuse policy: https://www.cdc.gov/other/agencymaterials.html",
     "retrieved": "2026-11-09",
-    "sourceReview": "Limited disaster wound-care reference, not a complete first-aid manual. Preserve the source\u2019s urgent medical-care, sepsis, embedded-object, bite, puncture and tetanus-evaluation warnings.",
+    "sourceReview": "Limited disaster wound-care reference, not a complete first-aid manual. Preserve the source’s urgent medical-care, sepsis, embedded-object, bite, puncture and tetanus-evaluation warnings.",
     "publicationNotice": "Source: U.S. Centers for Disease Control and Prevention (CDC). Original material is available free of charge from CDC at the source link. Reference to CDC does not imply endorsement of this library by CDC or the U.S. Government. Original PDF content is unchanged."
   },
   {
@@ -194,5 +194,89 @@
     "retrieved": "2026-11-09",
     "sourceReview": "Outage-time estimates depend on closed doors and cold-temperature conditions. Do not treat them as permission to hold food at unsafe temperatures. Never taste food to test safety; normal smell does not establish safety. Read the entire original.",
     "publicationNotice": "Source: U.S. Centers for Disease Control and Prevention (CDC). Original material is available free of charge from CDC at the source link. Reference to CDC does not imply endorsement of this library by CDC or the U.S. Government. Original PDF content is unchanged."
+  },
+  {
+    "id": "ifrc-shelter-safety",
+    "title": "IFRC: Shelter Safety Handbook",
+    "path": "originals/afac8456b672f3ac26b2ae3938d8a1d5236886f2e0dc65ef304cc2c42c30debe.pdf",
+    "sha256": "afac8456b672f3ac26b2ae3938d8a1d5236886f2e0dc65ef304cc2c42c30debe",
+    "bytes": 1120602,
+    "pages": 62,
+    "edition": "2011; English edition",
+    "source": "https://www.ifrc.org/sites/default/files/2021-08/305400-Shelter_safety_handbook-EN-LR.pdf",
+    "rights": "© International Federation of Red Cross and Red Crescent Societies (IFRC), Geneva, 2011. The copyright page (PDF page 2) permits copying all or part for noncommercial use with source acknowledgement. This is not public-domain material or a general commercial-use license. Preserve the original credits and notices.",
+    "retrieved": "2026-11-10",
+    "sourceReview": "Basic shelter-risk awareness and safer construction guidance, not site-specific engineering designs. Follow current local building codes and qualified local advice. Read complete original diagrams, warnings and adjacent pages; extracted text is only a search locator. This is the 2011 handbook, not a newly revised edition.",
+    "publicationNotice": "Source: IFRC, https://www.ifrc.org/document/shelter-safety-handbook . Shared unchanged for noncommercial reference use with attribution. No IFRC endorsement of this library is implied."
+  },
+  {
+    "id": "fda-insulin-products",
+    "title": "FDA: FDA-Approved Insulin Products",
+    "path": "originals/318822981589ccf4a37617fcc3a2ed2f31d243de5bceabffbefa8d7d2a4db9b1.pdf",
+    "sha256": "318822981589ccf4a37617fcc3a2ed2f31d243de5bceabffbefa8d7d2a4db9b1",
+    "bytes": 387604,
+    "pages": 20,
+    "edition": "FDA PDF, September 2026",
+    "source": "https://www.fda.gov/media/195052/download?attachment=",
+    "rights": "Source: U.S. Food and Drug Administration (FDA/CDER). Federal agency reference; preserve source attribution. Original PDF is unchanged.",
+    "retrieved": "2026-11-11",
+    "sourceReview": "General emergency reference, not individualized treatment advice. Insulin storage, concentrations, devices and switching rules are product-specific. Follow current product labeling and your clinician or pharmacist; do not infer substitutions from a class name alone. Read the complete source, including warnings. DKA is an emergency requiring immediate medical attention.",
+    "publicationNotice": "Available free of charge from FDA. Reference to FDA, HHS or the United States Government does not imply endorsement of this library. Product labels linked in this PDF require internet and are not bundled."
+  },
+  {
+    "id": "cdc-diabetes-emergencies",
+    "title": "CDC: Diabetes Care During Emergencies",
+    "path": "originals/e09dd45d3bc3c37266513f590561bf4dc30f5cc9327bae89afddccc4fd661536.pdf",
+    "sha256": "e09dd45d3bc3c37266513f590561bf4dc30f5cc9327bae89afddccc4fd661536",
+    "bytes": 6857,
+    "pages": 3,
+    "edition": "Offline text capture, November 11, 2026",
+    "source": "https://www.cdc.gov/diabetes/articles/diabetes-care-emergencies.html",
+    "rights": "Federal agency text reproduced with attribution; third-party imagery excluded. CDC reuse policy: https://www.cdc.gov/other/agencymaterials.html",
+    "retrieved": "2026-11-11",
+    "sourceReview": "General emergency reference, not individualized treatment advice. Insulin storage, concentrations, devices and switching rules are product-specific. Follow current product labeling and your clinician or pharmacist; do not infer substitutions from a class name alone. Read the complete source, including warnings. DKA is an emergency requiring immediate medical attention.",
+    "publicationNotice": "Source text is available free of charge from the agency at the source URL. Reference to CDC, FDA, HHS or the United States Government does not imply endorsement of this library. Offline text capture, not an agency-issued PDF. Images, website navigation and decorative elements are omitted. Linked resources are not included unless separately listed. Captured November 11, 2026."
+  },
+  {
+    "id": "cdc-emergency-insulin",
+    "title": "CDC: Managing Insulin in an Emergency",
+    "path": "originals/01b066cabb1a0edf769455e2af570ab87723b399ff27a3c5e10f63c9704b1fa6.pdf",
+    "sha256": "01b066cabb1a0edf769455e2af570ab87723b399ff27a3c5e10f63c9704b1fa6",
+    "bytes": 4781,
+    "pages": 2,
+    "edition": "Offline text capture, November 11, 2026",
+    "source": "https://www.cdc.gov/diabetes/articles/managing-insulin-in-emergency.html",
+    "rights": "Federal agency text reproduced with attribution; third-party imagery excluded. CDC reuse policy: https://www.cdc.gov/other/agencymaterials.html",
+    "retrieved": "2026-11-11",
+    "sourceReview": "General emergency reference, not individualized treatment advice. Insulin storage, concentrations, devices and switching rules are product-specific. Follow current product labeling and your clinician or pharmacist; do not infer substitutions from a class name alone. Read the complete source, including warnings. DKA is an emergency requiring immediate medical attention.",
+    "publicationNotice": "Source text is available free of charge from the agency at the source URL. Reference to CDC, FDA, HHS or the United States Government does not imply endorsement of this library. Offline text capture, not an agency-issued PDF. Images, website navigation and decorative elements are omitted. Linked resources are not included unless separately listed. Captured November 11, 2026."
+  },
+  {
+    "id": "cdc-diabetic-ketoacidosis",
+    "title": "CDC: Diabetic Ketoacidosis",
+    "path": "originals/9193ae09ddef0411769bb304ab5345ba0c914353a8d55f680ae35751dfcb0327.pdf",
+    "sha256": "9193ae09ddef0411769bb304ab5345ba0c914353a8d55f680ae35751dfcb0327",
+    "bytes": 7144,
+    "pages": 3,
+    "edition": "Offline text capture, November 11, 2026",
+    "source": "https://www.cdc.gov/diabetes/about/diabetic-ketoacidosis.html",
+    "rights": "Federal agency text reproduced with attribution; third-party imagery excluded. CDC reuse policy: https://www.cdc.gov/other/agencymaterials.html",
+    "retrieved": "2026-11-11",
+    "sourceReview": "General emergency reference, not individualized treatment advice. Insulin storage, concentrations, devices and switching rules are product-specific. Follow current product labeling and your clinician or pharmacist; do not infer substitutions from a class name alone. Read the complete source, including warnings. DKA is an emergency requiring immediate medical attention.",
+    "publicationNotice": "Source text is available free of charge from the agency at the source URL. Reference to CDC, FDA, HHS or the United States Government does not imply endorsement of this library. Offline text capture, not an agency-issued PDF. Images, website navigation and decorative elements are omitted. Linked resources are not included unless separately listed. Captured November 11, 2026."
+  },
+  {
+    "id": "fda-emergency-insulin",
+    "title": "FDA: Information Regarding Insulin Storage and Switching Between Products in an Emergency",
+    "path": "originals/f7aa436d99ee795ff6c349404fd9eaee27915e2e1d05cd05339afae31bec8a7f.pdf",
+    "sha256": "f7aa436d99ee795ff6c349404fd9eaee27915e2e1d05cd05339afae31bec8a7f",
+    "bytes": 11592,
+    "pages": 5,
+    "edition": "Offline text capture, November 11, 2026",
+    "source": "https://www.fda.gov/drugs/emergency-preparedness-drugs/information-regarding-insulin-storage-and-switching-between-products-emergency",
+    "rights": "Federal agency text reproduced with attribution; third-party imagery excluded. FDA source attribution retained. No endorsement implied.",
+    "retrieved": "2026-11-11",
+    "sourceReview": "General emergency reference, not individualized treatment advice. Insulin storage, concentrations, devices and switching rules are product-specific. Follow current product labeling and your clinician or pharmacist; do not infer substitutions from a class name alone. Read the complete source, including warnings. DKA is an emergency requiring immediate medical attention.",
+    "publicationNotice": "Source text is available free of charge from the agency at the source URL. Reference to CDC, FDA, HHS or the United States Government does not imply endorsement of this library. Offline text capture, not an agency-issued PDF. Images, website navigation and decorative elements are omitted. Linked resources are not included unless separately listed. Captured November 11, 2026."
   }
 ]
