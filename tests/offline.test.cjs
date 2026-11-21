@@ -92,7 +92,7 @@ test('unreliable page extraction is shown as a page picture, labelled, and never
  assert.match(source('viewer.js'),/validPage/);
 });
 
-test('reviewed reference release excludes held material and retains CDC notice',()=>{const docs=JSON.parse(source('originals.json')).filter(d=>!Number.isInteger(d.guide)&&!['cdc-diabetes-emergencies','cdc-emergency-insulin','cdc-diabetic-ketoacidosis','fda-emergency-insulin','fda-insulin-products'].includes(d.id));assert.deepEqual(docs.map(d=>d.id).sort(),['cdc-emergency-water','cdc-food-power-outage','cdc-handwashing','cdc-shelter-health','cdc-wound-care','ifrc-shelter-safety','usgs-map-and-compass']);for(const d of docs){assert.ok(d.sourceReview);if(d.id.startsWith('cdc-'))assert.match(d.publicationNotice,/free of charge.*does not imply endorsement/)}const pages=JSON.parse(source('library.json')).filter(p=>p.pdfPage&&docs.some(d=>d.id===p.originalId));assert.equal(pages.length,65);for(const p of pages){const d=docs.find(d=>d.id===p.originalId);assert.equal(p.sourceSha256,d.sha256);assert.ok(p.pdfPage<=d.pages)}});
+test('reviewed reference release excludes held material and retains CDC notice',()=>{const docs=JSON.parse(source('originals.json')).filter(d=>!Number.isInteger(d.guide)&&!['cdc-diabetes-emergencies','cdc-emergency-insulin','cdc-diabetic-ketoacidosis','fda-emergency-insulin','fda-insulin-products'].includes(d.id)&&!ADDITIONS_2026_11_21.includes(d.id));assert.deepEqual(docs.map(d=>d.id).sort(),['cdc-emergency-water','cdc-food-power-outage','cdc-handwashing','cdc-shelter-health','cdc-wound-care','ifrc-shelter-safety','usgs-map-and-compass']);for(const d of docs){assert.ok(d.sourceReview);if(d.id.startsWith('cdc-'))assert.match(d.publicationNotice,/free of charge.*does not imply endorsement/)}const pages=JSON.parse(source('library.json')).filter(p=>p.pdfPage&&docs.some(d=>d.id===p.originalId));assert.equal(pages.length,65);for(const p of pages){const d=docs.find(d=>d.id===p.originalId);assert.equal(p.sourceSha256,d.sha256);assert.ok(p.pdfPage<=d.pages)}});
 
 test('offline PDF renderer has bounded page controls and bundled assets',()=>{assert.doesNotMatch(source('viewer.html'),/<iframe/);for(const id of ['previous','next','go-page','pdf-canvas'])assert.ok(source('viewer.html').includes('id="'+id+'"'));assert.match(source('sw.js'),/vendor\/pdfjs\/pdf.worker.min.mjs/);assert.match(source('pagepic.js'),/isEvalSupported: false/);});
 
@@ -111,12 +111,12 @@ test('every original page record points at a real page and carries no damaged ch
 test('search matches whole words with plural and ending variants',()=>{
   const S=loadSearch();
   for(const [a,b] of [['jar','jars'],['pickle','pickling'],['pickles','pickled'],['canning','canned'],['tomato','tomatoes'],['berry','berries']])assert.equal(S.stem(a),S.stem(b),a+'/'+b);
-  const idx=[{id:'a',title:'A',text:'Pecans and a scanner.'},{id:'b',title:'B',text:'Can the jars.'}].map(r=>S.index(r));
-  assert.deepEqual([...S.search(idx,'can').hits.map(h=>h.rec.id)],['b']);
-  assert.deepEqual([...S.search(idx,'jar').hits.map(h=>h.rec.id)],['b']);
+  const idx=[{id:'a',title:'A',text:'Pecans and a scanner.'},{id:'b',title:'B',text:'Can the jars.'}];const index=S.createIndex(idx);
+  assert.deepEqual([...S.search(index,'can').hits.map(h=>h.rec.id)],['b']);
+  assert.deepEqual([...S.search(index,'jar').hits.map(h=>h.rec.id)],['b']);
 });
 test('quoted phrases are required and ranked pages put all words first',()=>{
-  const S=loadSearch();const idx=loadPages().map((r,i)=>S.index({...r,order:i}));
+  const S=loadSearch();const idx=S.createIndex(loadPages());
   const phrase=S.search(idx,'"weighted gauge"');assert.ok(phrase.hits.length>10);
   for(const h of phrase.hits)assert.match(h.rec.text.toLowerCase().replace(/\s+/g,' '),/weighted[\s-]+gauge/);
   const venison=S.search(idx,'venison quart');assert.equal(venison.hits[0].rec.doc,'usda-5');assert.ok(venison.hits[0].allTerms);
@@ -124,7 +124,7 @@ test('quoted phrases are required and ranked pages put all words first',()=>{
 });
 test('results show short highlighted excerpts, safely escaped',()=>{
   const S=loadSearch();const q=S.parseQuery('venison');
-  const rec=S.index({id:'x',title:'T',text:'line one\nline two\nGround venison <b>here</b>\nline four\nline five\nline six\nline seven'});
+  const rec=({id:'x',title:'T',text:'line one\nline two\nGround venison <b>here</b>\nline four\nline five\nline six\nline seven'});
   const ex=S.excerpts(rec,q);assert.equal(ex.length,1);assert.doesNotMatch(ex[0].text,/line seven/);
   const html=S.highlightHTML(ex[0].text,q);assert.match(html,/<mark>venison<\/mark>/);assert.match(html,/&lt;b&gt;here/);assert.doesNotMatch(html,/<b>/);
 });
@@ -159,3 +159,35 @@ test('IFRC handbook keeps noncommercial attribution and page-linked search',()=>
 });
 
  test('diabetes references preserve provenance and safe page locators',()=>{const ds=JSON.parse(source('originals.json')).filter(d=>['cdc-diabetes-emergencies','cdc-emergency-insulin','cdc-diabetic-ketoacidosis','fda-emergency-insulin','fda-insulin-products'].includes(d.id));assert.equal(ds.length,5);const ps=JSON.parse(source('library.json')).filter(p=>ds.some(d=>d.id===p.originalId));assert.equal(ps.length,33);for(const d of ds){assert.match(d.sourceReview,/product-specific/);assert.match(d.publicationNotice,/does not imply endorsement/)}for(const p of ps){const d=ds.find(d=>d.id===p.originalId);assert.ok(p.pdfPage>=1&&p.pdfPage<=d.pages);assert.equal(p.sourceSha256,d.sha256);assert.match(p.extraction,/locator/);}});
+
+const ADDITIONS_2026_11_21=['army-atp-4-02-11','fema-cert-manual','phs-ships-medicine-chest','twdb-rainwater-manual','nrcs-springs-wells','army-tc-4-02-3','army-atp-4-25-12','epa-emergency-disinfection','uky-poisonous-plants','msu-forgotten-foods','army-atp-3-50-21','fema-are-you-ready','cpsc-generators-co','epa-burn-wise','dhs-auxfog','fda-food-facts','peace-corps-poultry','cdc-extreme-cold','cdc-niosh-poisonous-plants'];
+test('November 21 survival additions carry rights, review, caution and page locators',()=>{
+  const docs=JSON.parse(source('originals.json')),lib=JSON.parse(source('library.json'));
+  for(const id of ADDITIONS_2026_11_21){
+    const d=docs.find(d=>d.id===id);assert.ok(d,id);
+    for(const k of ['title','topic','edition','rights','sourceReview','caution','retrieved'])assert.ok(d[k]&&d[k].length>3,id+' '+k);
+    assert.match(d.source,/^https:\/\/(armypubs\.army\.mil|www\.ready\.gov|www\.govinfo\.gov|www\.twdb\.texas\.gov|directives\.nrcs\.usda\.gov|www\.epa\.gov|publications\.ca\.uky\.edu|extension\.msstate\.edu|www\.cpsc\.gov|www\.cisa\.gov|www\.fda\.gov|files\.peacecorps\.gov|stacks\.cdc\.gov|www\.cdc\.gov)\//,id);
+    if(id.startsWith('cdc-'))assert.match(d.publicationNotice,/free of charge.*does not imply endorsement/);
+    const pages=lib.filter(p=>p.originalId===id);assert.ok(pages.length>0,id);
+    for(const p of pages){assert.equal(p.sourceSha256,d.sha256);assert.ok(p.pdfPage>=1&&p.pdfPage<=d.pages);assert.match(p.extraction,/locator/)}
+  }
+  for(const id of ['army-atp-4-02-11','army-tc-4-02-3','army-atp-4-25-12','army-atp-3-50-21'])assert.match(docs.find(d=>d.id===id).rights,/Approved for public release/i);
+  for(const id of ['uky-poisonous-plants','msu-forgotten-foods'])assert.match(docs.find(d=>d.id===id).rights,/nonprofit/);
+  assert.match(docs.find(d=>d.id==='phs-ships-medicine-chest').caution,/outdated/);
+  assert.match(docs.find(d=>d.id==='army-atp-3-50-21').caution,/edibility test/);
+  assert.match(docs.find(d=>d.id==='cdc-niosh-poisonous-plants').sourceReview,/not byte-identical/);
+});
+test('every original has a topic and the menu groups documents by topic',()=>{
+  for(const d of JSON.parse(source('originals.json')))assert.ok(d.topic,d.id);
+  assert.match(source('app.js'),/optgroup/);
+});
+test('search index stays compact and ranks rare words above common ones',()=>{
+  const S=loadSearch();const idx=S.createIndex(loadPages());
+  assert.ok(idx.recs.every(r=>r.seq instanceof idx.recs[0].seq.constructor&&!('toks' in r)));
+  const top=q=>S.search(idx,q).hits[0].rec.doc;
+  assert.equal(top('venison quart'),'usda-5');
+  assert.equal(top('pressure canning venison quart jars altitude 800 feet'),'usda-5');
+  assert.equal(top('first flush diverter'),'twdb-rainwater-manual');
+  assert.equal(top('generator carbon monoxide'),'cpsc-generators-co');
+  assert.equal(top('latrine'),'army-atp-4-25-12');
+});

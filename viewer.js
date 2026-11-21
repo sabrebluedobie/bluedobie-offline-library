@@ -9,7 +9,7 @@ function validPage(value,total){const n=Number(value);return Number.isInteger(n)
   // Opened from local files: hand the PDF to the browser's own reader at the right page.
   if(location.protocol==='file:'){location.replace(item.path+'#page='+validPage(params.get('page'),item.pages));return;}
   $('document-title').textContent=item.title;
-  $('source-notice').textContent=item.id.startsWith('cdc-')?'CDC source, free from CDC. No CDC or U.S. Government endorsement.':'';
+  $('source-notice').textContent=[item.id.startsWith('cdc-')?'CDC source, free from CDC. No CDC or U.S. Government endorsement.':'',item.caution?'⚠︎ '+item.caution:''].filter(Boolean).join(' ');
   $('source-context').textContent=[item.source,item.edition,item.rights,item.publicationNotice,item.sourceReview].filter(Boolean).join(' ');
   const q=params.get('q')||'';
   const query=q&&window.LibrarySearch?window.LibrarySearch.parseQuery(q):null;

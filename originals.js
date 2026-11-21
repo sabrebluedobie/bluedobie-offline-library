@@ -26,16 +26,32 @@ async function verifiedPDF(response, item) {
   const state = {saved: 0, total: items.length, saving: false};
   const announce = () => window.dispatchEvent(new CustomEvent('originals-status', {detail: {...state}}));
 
+  const sections = new Map();
   for (const item of items) {
-    const box = document.createElement('article'), title = document.createElement('h3'), note = document.createElement('p'), status = document.createElement('p'), link = document.createElement('a');
+    const topic = item.topic || 'Other';
+    if (!sections.has(topic)) {
+      const h = document.createElement('h3');
+      h.className = 'topic';
+      h.textContent = topic;
+      root.append(h);
+      sections.set(topic, h);
+    }
+  }
+  for (const item of [...items].sort((a, b) => [...sections.keys()].indexOf(a.topic || 'Other') - [...sections.keys()].indexOf(b.topic || 'Other'))) {
+    const box = document.createElement('article'), title = document.createElement('h4'), note = document.createElement('p'), status = document.createElement('p'), link = document.createElement('a');
     title.textContent = item.title;
     note.className = 'hint';
     note.textContent = `${item.edition} · ${item.pages} PDF pages · ${(item.bytes / 1048576).toFixed(2)} MiB. ${item.source} ${item.rights} ${item.sourceReview || ''} ${item.publicationNotice || ''}`;
     status.setAttribute('role', 'status');
     link.href = LOCAL_FILE ? item.path : './viewer.html?doc=' + encodeURIComponent(item.id);
     link.textContent = 'Open original PDF';
-    box.append(title, status, link, note);
-    root.append(box);
+    box.append(title, status, link);
+    if (item.caution) { const c = document.createElement('p'); c.className = 'doc-caution'; c.textContent = '⚠︎ ' + item.caution; box.append(c); }
+    box.append(note);
+    const section = sections.get(item.topic || 'Other');
+    let last = section;
+    while (last.nextElementSibling && last.nextElementSibling.tagName === 'ARTICLE') last = last.nextElementSibling;
+    last.after(box);
     rows.set(item.id, {status, link});
   }
 

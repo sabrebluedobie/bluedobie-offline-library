@@ -49,21 +49,41 @@
     return {terms: uniqueTerms, phrases, marks, empty: !uniqueTerms.length && !phrases.length};
   }
 
-  function index(record) {
-    const toks = tokens(record.text);
-    const titleStems = new Set(tokens(record.title || '').map(t => t.stem));
-    return {...record, toks, stems: toks.map(t => t.stem), stemSet: new Set(toks.map(t => t.stem)), titleStems};
+  // ---- Compact index ----
+  // Every distinct word stem gets a number; each page keeps its words as one Int32Array, and
+  // each stem keeps the list of pages containing it. Thousands of pages fit in a few MB,
+  // which matters on phones.
+  function createIndex(records) {
+    const ids = new Map(), stems = [], stemCache = new Map();
+    const idOf = st => { let id = ids.get(st); if (id === undefined) { id = stems.length; ids.set(st, id); stems.push(st); } return id; };
+    const seqFor = text => {
+      const out = [];
+      const t = normalize(text);
+      WORD.lastIndex = 0;
+      let m;
+      while ((m = WORD.exec(t))) {
+        const w = m[0].toLowerCase();
+        let id = stemCache.get(w);
+        if (id === undefined) { id = idOf(stem(w)); stemCache.set(w, id); }
+        out.push(id);
+      }
+      return Int32Array.from(out);
+    };
+    const postings = [];
+    let total = 0;
+    const recs = records.map((r, order) => {
+      const seq = seqFor(r.text);
+      const title = new Set(seqFor(r.title || ''));
+      total += seq.length;
+      for (const id of new Set(seq)) (postings[id] || (postings[id] = [])).push(order);
+      return {...r, order, seq, titleIds: title};
+    });
+    return {recs, ids, stems, postings, N: recs.length, avgLen: total / Math.max(1, recs.length)};
   }
 
-  function phraseAt(stems, phrase, i) {
-    for (let k = 0; k < phrase.length; k++) if (stems[i + k] !== phrase[k]) return false;
+  function phraseAt(seq, phrase, i) {
+    for (let k = 0; k < phrase.length; k++) if (seq[i + k] !== phrase[k]) return false;
     return true;
-  }
-
-  function phrasePositions(stems, phrase) {
-    const out = [];
-    for (let i = 0; i + phrase.length <= stems.length; i++) if (phraseAt(stems, phrase, i)) out.push(i);
-    return out;
   }
 
   // Smallest token window containing every matched term (for "words near each other").
@@ -86,48 +106,76 @@
     return best;
   }
 
-  function scoreRecord(rec, query) {
-    const phraseHits = query.phrases.map(p => phrasePositions(rec.stems, p));
-    if (phraseHits.some(h => !h.length)) return null; // quoted phrases are required
-    const positions = query.terms.map(t => {
-      if (!rec.stemSet.has(t)) return [];
-      const out = [];
-      rec.stems.forEach((s, i) => { if (s === t) out.push(i); });
-      return out;
-    });
-    const matched = positions.filter(p => p.length).length;
-    if (!matched && !query.phrases.length) return null;
-    let score = 0;
-    positions.forEach((p, i) => {
-      if (p.length) score += 10 + Math.min(5, p.length);
-      if (rec.titleStems.has(query.terms[i])) score += 4;
-    });
-    phraseHits.forEach(h => { score += 25 + Math.min(5, h.length); });
-    const allTerms = matched === query.terms.length;
-    if (allTerms && query.terms.length > 1) {
-      score += 30;
-      const span = windowSize(positions);
-      score += Math.max(0, 20 - span / 4);
-    }
-    return {score, allTerms, matchedTerms: query.terms.filter((_, i) => positions[i].length)};
-  }
-
-  function search(indexed, q, filter) {
+  // BM25 ranking: words that are rare in the library count for more than common ones, and
+  // long pages are not favoured just for being long. Pages with every word, with the words
+  // close together, or with an exact quoted phrase rank higher. Quoted phrases are required.
+  function search(index, q, filter) {
     const query = typeof q === 'string' ? parseQuery(q) : q;
     if (query.empty) return {query, hits: []};
-    const hits = [];
-    for (const rec of indexed) {
-      if (filter && !filter(rec)) continue;
-      const s = scoreRecord(rec, query);
-      if (s) hits.push({rec, ...s});
+    const {recs, ids, postings, N, avgLen} = index;
+    const termIds = query.terms.map(t => ids.has(t) ? ids.get(t) : -1);
+    const phraseIds = query.phrases.map(p => p.map(t => ids.has(t) ? ids.get(t) : -1));
+    if (phraseIds.some(p => p.includes(-1))) return {query, hits: []};
+    const idf = id => { const df = postings[id] ? postings[id].length : 0; return Math.log(1 + (N - df + 0.5) / (df + 0.5)); };
+    const termIdf = termIds.map(id => id < 0 ? 0 : idf(id));
+    const sumIdf = termIdf.reduce((a, b) => a + b, 0) || 1;
+
+    let candidates;
+    if (phraseIds.length) {
+      const rarest = phraseIds.flat().reduce((best, id) => (postings[id] || []).length < (postings[best] || []).length ? id : best);
+      candidates = postings[rarest] || [];
+    } else {
+      const set = new Set();
+      for (const id of termIds) if (id >= 0 && postings[id]) for (const r of postings[id]) set.add(r);
+      candidates = [...set];
     }
-    hits.sort((a, b) => b.score - a.score || (a.rec.order || 0) - (b.rec.order || 0));
+
+    const hits = [];
+    for (const ri of candidates) {
+      const rec = recs[ri];
+      if (filter && !filter(rec)) continue;
+      const seq = rec.seq;
+      let phraseCount = 0, phraseOk = true;
+      for (const p of phraseIds) {
+        let c = 0;
+        for (let i = 0; i + p.length <= seq.length; i++) if (seq[i] === p[0] && phraseAt(seq, p, i)) c++;
+        if (!c) { phraseOk = false; break; }
+        phraseCount += c;
+      }
+      if (!phraseOk) continue;
+      const positions = termIds.map(() => []);
+      if (termIds.length) for (let i = 0; i < seq.length; i++) { const k = termIds.indexOf(seq[i]); if (k >= 0) positions[k].push(i); }
+      const matched = positions.filter(p => p.length).length;
+      if (!matched && !phraseIds.length) continue;
+      const norm = 1.2 * (0.25 + 0.75 * seq.length / avgLen);
+      let score = 0;
+      positions.forEach((p, k) => {
+        if (p.length) score += termIdf[k] * (p.length * 2.2) / (p.length + norm);
+        if (termIds[k] >= 0 && rec.titleIds.has(termIds[k])) score += termIdf[k] * 0.3;
+      });
+      if (phraseIds.length) {
+        const pIdf = phraseIds.flat().reduce((a, id) => a + idf(id), 0);
+        score += pIdf * (1 + Math.min(3, phraseCount) * 0.2);
+      }
+      const allTerms = matched === termIds.length;
+      if (allTerms && termIds.length > 1) {
+        score += sumIdf * 0.5;
+        score += sumIdf * 0.5 * Math.max(0, 1 - windowSize(positions) / 80);
+      }
+      hits.push({rec, score, allTerms, matchedTerms: query.terms.filter((_, k) => positions[k].length)});
+    }
+    hits.sort((a, b) => b.score - a.score || a.rec.order - b.rec.order);
     return {query, hits};
+  }
+
+  function phraseAtStems(stems, phrase, i) {
+    for (let k = 0; k < phrase.length; k++) if (stems[i + k] !== phrase[k]) return false;
+    return true;
   }
 
   function isMatch(stems, i, query) {
     if (query.terms.includes(stems[i])) return true;
-    for (const p of query.phrases) for (let k = 0; k < p.length; k++) if (i - k >= 0 && phraseAt(stems, p, i - k)) return true;
+    for (const p of query.phrases) for (let k = 0; k < p.length; k++) if (i - k >= 0 && phraseAtStems(stems, p, i - k)) return true;
     return false;
   }
 
@@ -138,8 +186,9 @@
     for (let i = 0; i < text.length; i++) if (text[i] === '\n') lineStarts.push(i + 1);
     const lineOf = pos => { let lo = 0, hi = lineStarts.length - 1; while (lo < hi) { const mid = (lo + hi + 1) >> 1; if (lineStarts[mid] <= pos) lo = mid; else hi = mid - 1; } return lo; };
     const hitLines = new Map();
-    rec.toks.forEach((t, i) => {
-      if (!isMatch(rec.stems, i, query)) return;
+    const toks = tokens(text), stems = toks.map(t => t.stem);
+    toks.forEach((t, i) => {
+      if (!isMatch(stems, i, query)) return;
       const line = lineOf(t.start);
       if (!hitLines.has(line)) hitLines.set(line, new Set());
       hitLines.get(line).add(t.stem);
@@ -179,5 +228,5 @@
     return out + escapeHTML(s.slice(last));
   }
 
-  global.LibrarySearch = {normalize, stem, tokens, parseQuery, index, search, excerpts, highlightHTML, escapeHTML};
+  global.LibrarySearch = {normalize, stem, tokens, parseQuery, createIndex, search, excerpts, highlightHTML, escapeHTML};
 })(typeof window !== 'undefined' ? window : globalThis);

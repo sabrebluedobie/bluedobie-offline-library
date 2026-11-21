@@ -8,7 +8,8 @@ const DB = 'bluedobie-offline-library-v1';
 const originals = window.ORIGINAL_DOCUMENTS || [];
 const originalById = new Map(originals.map(o => [o.id, o]));
 let builtins = (window.LIBRARY_PAGES || []).map(r => ({...r, original: originalById.get(r.doc)}));
-let imports = [], indexed = [], lastHits = [], lastQuery = null, shown = 0, objectURLs = [];
+let filterFor = () => null;
+let imports = [], indexed = null, lastHits = [], lastQuery = null, shown = 0, objectURLs = [];
 
 // ---- Device storage for imported TXT files (IndexedDB) ----
 function db() { return new Promise((resolve, reject) => { const r = indexedDB.open(DB, 1); r.onupgradeneeded = () => r.result.createObjectStore('files', {keyPath: 'id'}); r.onsuccess = () => resolve(r.result); r.onerror = () => reject(r.error); }); }
@@ -31,11 +32,28 @@ function importSections(file) {
 
 function rebuildIndex() {
   const records = [...builtins, ...imports.flatMap(importSections)];
-  indexed = records.map((r, order) => S.index({...r, order}));
+  indexed = S.createIndex(records);
+  // Filter menu: whole topics first, then single documents grouped by topic.
   const current = $('guide').value;
-  const titles = [...new Set(records.map(r => r.title))];
-  $('guide').replaceChildren(new Option('All documents', ''), ...titles.map(t => new Option(t, t)));
-  $('guide').value = titles.includes(current) ? current : '';
+  const topicOf = r => r.imported ? 'Imported files' : (r.original && r.original.topic) || 'Other';
+  const groups = new Map();
+  for (const r of records) {
+    if (!groups.has(topicOf(r))) groups.set(topicOf(r), new Set());
+    groups.get(topicOf(r)).add(r.title);
+  }
+  const values = [''];
+  const topicsGroup = document.createElement('optgroup');
+  topicsGroup.label = 'Topics';
+  for (const topic of groups.keys()) { topicsGroup.append(new Option('All of: ' + topic, 't:' + topic)); values.push('t:' + topic); }
+  const docGroups = [...groups].map(([topic, titles]) => {
+    const g = document.createElement('optgroup');
+    g.label = topic;
+    for (const t of titles) { g.append(new Option(t, 'd:' + t)); values.push('d:' + t); }
+    return g;
+  });
+  $('guide').replaceChildren(new Option('All documents', ''), topicsGroup, ...docGroups);
+  $('guide').value = values.includes(current) ? current : '';
+  filterFor = value => !value ? null : value.startsWith('t:') ? r => topicOf(r) === value.slice(2) : r => r.title === value.slice(2);
   $('count').textContent = `${builtins.length} searchable pages in ${originals.length} documents` + (imports.length ? ` · ${imports.length} imported file(s)` : '');
 }
 
@@ -201,11 +219,12 @@ function resultCard(hit, q) {
     actions.append(copy);
   }
   article.append(actions);
-  if (rec.original && /^USDA/.test(rec.title)) {
+  const caution = rec.original && (rec.original.caution || (/^USDA/.test(rec.title) ? 'Check processing times, pressure, altitude and jar size against the full original page before use.' : ''));
+  if (caution) {
     const note = document.createElement('p');
-    note.className = 'hint';
-    note.textContent = 'Check processing times, pressure, altitude and jar size against the full original page before use.';
-    article.append(note);
+    note.className = 'doc-caution';
+    note.textContent = '⚠︎ ' + caution;
+    meta.after(note);
   }
   return article;
 }
@@ -246,7 +265,7 @@ function doSearch() {
   const guide = $('guide').value;
   clearResults();
   remember(q);
-  const {query, hits} = S.search(indexed, q, guide ? r => r.title === guide : null);
+  const {query, hits} = S.search(indexed, q, filterFor(guide));
   lastQuery = query; lastHits = hits; shown = 0;
   if (query.empty) { rebuildCount(); $('examples').hidden = false; return; }
   $('examples').hidden = true;
