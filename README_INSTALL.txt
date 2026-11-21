@@ -61,12 +61,46 @@ SEARCH
   The extracted lines are available underneath, labelled unverified, and are not offered
   for "Copy for Gemma". Opened from local files (mode B), the labelled extracted lines
   are shown instead of the picture.
-- Copy for Gemma copies a Guides 1-5 page with its source for pasting into Locally. The
-  apps are not integrated.
+- Copy for Gemma copies a Guides 1-5 page with its source for pasting into Locally.
+
+ASK GEMMA (LOCAL AI, OPTIONAL)
+------------------------------
+The library picks the best pages for your question (the same keyword search), hands only
+those pages to Gemma, and lists them under the answer with "Open page" links, cautions and
+page pictures, so every answer can be checked. Nothing goes to the internet.
+
+Mac, inside the library (Ask Gemma panel):
+  1. In LM Studio: Developer tab > start the server (http://localhost:1234), then Server
+     Settings > turn on "Enable CORS". Load a Gemma model (a context length of 8,000+
+     tokens is best; Gemma 4 12B at 16,128 tokens gets up to 5 pages per question).
+  2. In the library, open "Ask Gemma", press "Check connection", then ask.
+     If Chrome asks to let the page reach devices on your local network, choose Allow.
+  3. Gemma 4 12B took about 2 minutes per answer on this Mac. Safari may block a web page
+     from reaching LM Studio (untested); Chrome works. The portable copy opened from files
+     may also be blocked; use the installed app or option below.
+
+Mac, inside LM Studio's chat (library connected as a tool):
+  Add this to ~/.lmstudio/mcp.json under "mcpServers" (LM Studio: Program tab > Install >
+  Edit mcp.json), using the real path to this folder:
+      "offline-library": {
+        "command": "/opt/homebrew/bin/node",
+        "args": ["/Users/<you>/Documents/Client FIles/bluedobie-offline-library/tools/library-mcp.cjs"]
+      }
+  Gemma can then search the library (search_library), read neighbouring pages (read_page)
+  and list documents (list_documents) while you chat. LM Studio asks before each tool use.
+  The server reads this folder's data files, so keep the folder where it is.
+
+iPhone/iPad (Locally): type the question in "Ask Gemma" and press "Copy for Locally". It
+copies the question, answering rules and the 3 best pages (shortened to suit phone
+models), then open Locally, paste into a new chat and send. Locally has no way for a web
+page to send it questions directly.
+
+Answers can still be wrong or incomplete. Always check figures for food safety, medical
+care, doses and water treatment on the cited original page.
 
 LIMITATIONS
 -----------
-- Keyword search, not semantic search or AI.
+- Search is keyword-based (with word endings and rare-word ranking), not semantic.
 - Extracted text is not a certified transcription. Always check processing times,
   pressures, altitudes, jar sizes and doses against the original page.
 - Imported TXT files are stored in this browser on this device only.
@@ -86,6 +120,8 @@ by hand, regenerate with:
 Then bump CACHE in sw.js and OFFLINE_BUILD in offline.js.
 Checks:
     node --test tests/offline.test.cjs
+Ask Gemma code: ask.js (question to pages and prompts), gemma.js (panel), and
+tools/library-mcp.cjs (LM Studio tool server); all three share search.js.
 The tests simulate browser APIs and check data integrity (sizes, hashes, page ranges,
 generated files up to date). They do not certify Safari/iOS behaviour: repeat the
 Airplane Mode test on real devices after every update. After an update, open the app

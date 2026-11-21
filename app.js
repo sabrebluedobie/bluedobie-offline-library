@@ -291,6 +291,8 @@ async function copyText(text, button) {
 }
 
 // ---- Wiring ----
+// Shared with the Ask Gemma panel (gemma.js).
+window.LibraryApp = {get index() { return indexed; }, filter: () => filterFor($('guide').value), pageLink};
 let typing;
 $('search').onclick = doSearch;
 $('query').onkeydown = e => { if (e.key === 'Enter') { clearTimeout(typing); doSearch(); } };

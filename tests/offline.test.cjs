@@ -191,3 +191,53 @@ test('search index stays compact and ranks rare words above common ones',()=>{
   assert.equal(top('generator carbon monoxide'),'cpsc-generators-co');
   assert.equal(top('latrine'),'army-atp-4-25-12');
 });
+
+// ---- Gemma: question-to-sources builder and LM Studio tool server ----
+function loadAsk(){const ctx={window:{}};for(const f of ['originals-data.js','library-data.js','search.js','ask.js'])vm.runInNewContext(source(f),ctx);const docs=new Map(ctx.window.ORIGINAL_DOCUMENTS.map(d=>[d.id,d]));const S=ctx.window.LibrarySearch;return {S,A:ctx.window.LibraryAsk,index:S.createIndex(ctx.window.LIBRARY_PAGES.map(r=>({...r,original:docs.get(r.doc)})))};}
+test('questions become keywords and the right library pages',()=>{
+  const {S,A,index}=loadAsk();
+  assert.equal(A.keywords('How long do I pressure can ground venison in quart jars?'),'pressure ground venison quart jars');
+  assert.equal(A.keywords('what about "weighted gauge" canners'),'"weighted gauge" canners');
+  const r=A.retrieve(S,index,'How long do I pressure can ground venison in quart jars at 800 feet?',{pages:4,maxChars:3500});
+  assert.equal(r.sources[0].rec.id,'usda-5-page-6');assert.equal(r.sources.length,4);
+  for(const s of r.sources)assert.ok(s.text.length<=3500&&s.text.length>100);
+  assert.ok(A.retrieve(S,index,'How do I treat frostbite?').sources.some(s=>s.rec.doc==='cdc-extreme-cold'||s.rec.doc==='fema-cert-manual'));
+});
+test('prompts keep the model to the numbered pages, with cautions and table warnings',()=>{
+  const {S,A,index}=loadAsk();const r=A.retrieve(S,index,'How much bleach per gallon of water?');
+  const m=A.messages('How much bleach per gallon of water?',r.sources);
+  assert.equal(m[0].role,'system');assert.match(m[0].content,/only the numbered sources/);assert.match(m[0].content,/Never fill gaps from memory/);
+  assert.match(m[1].content,/\[1\] .*PDF page \d+/);assert.match(m[1].content,/Question: How much bleach/);
+  const layout=r.sources.find(s=>s.rec.layout);assert.ok(layout);assert.match(A.formatSource(layout),/Tables may be scrambled/);
+  const cautioned=r.sources.find(s=>s.rec.original&&s.rec.original.caution);assert.match(A.formatSource(cautioned),/Document caution: /);
+  assert.match(A.pasteText('q',r.sources),/^You answer questions using only/);
+});
+test('Ask Gemma talks only to the local LM Studio server and lists the pages it used',()=>{
+  const g=source('gemma.js');
+  assert.match(g,/'http:\/\/localhost:1234'/);assert.match(g,/targetAddressSpace = 'loopback'/);
+  assert.doesNotMatch(g,/fetch\(['"`]https?:\/\/(?!localhost)/);
+  assert.match(g,/showSources\(r\)/);assert.match(g,/check the pages below/);
+  assert.match(source('index.html'),/id="ask-panel"/);
+});
+test('LM Studio tool server answers MCP requests over stdio',async()=>{
+  const {spawn}=require('node:child_process');
+  const p=spawn(process.execPath,[path.join(root,'tools/library-mcp.cjs')]);
+  const lines=[];let buf='';p.stdout.on('data',d=>{buf+=d;let i;while((i=buf.indexOf('\n'))>=0){lines.push(JSON.parse(buf.slice(0,i)));buf=buf.slice(i+1)}});
+  const send=o=>p.stdin.write(JSON.stringify(o)+'\n');
+  send({jsonrpc:'2.0',id:1,method:'initialize',params:{protocolVersion:'2025-06-18',capabilities:{},clientInfo:{name:'t',version:'1'}}});
+  send({jsonrpc:'2.0',method:'notifications/initialized'});
+  send({jsonrpc:'2.0',id:2,method:'tools/list'});
+  send({jsonrpc:'2.0',id:3,method:'tools/call',params:{name:'search_library',arguments:{query:'pressure canning venison quart',max_results:2}}});
+  send({jsonrpc:'2.0',id:4,method:'tools/call',params:{name:'read_page',arguments:{document_id:'usda-5',page:6}}});
+  send({jsonrpc:'2.0',id:5,method:'tools/call',params:{name:'read_page',arguments:{document_id:'nope',page:1}}});
+  send({jsonrpc:'2.0',id:6,method:'bogus'});
+  for(let i=0;i<100&&lines.length<6;i++)await new Promise(r=>setTimeout(r,50));
+  p.kill();
+  const by=Object.fromEntries(lines.map(l=>[l.id,l]));
+  assert.equal(by[1].result.serverInfo.name,'offline-library');
+  assert.deepEqual([...by[2].result.tools.map(t=>t.name)],['search_library','read_page','list_documents']);
+  assert.match(by[3].result.content[0].text,/\[1\] USDA Guide 5.*PDF page 6/);assert.match(by[3].result.content[0].text,/Repeat every "Document caution"/);
+  assert.match(by[4].result.content[0].text,/venison/i);
+  assert.equal(by[5].result.isError,true);
+  assert.equal(by[6].error.code,-32601);
+});

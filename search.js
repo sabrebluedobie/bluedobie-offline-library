@@ -76,7 +76,11 @@
       const title = new Set(seqFor(r.title || ''));
       total += seq.length;
       for (const id of new Set(seq)) (postings[id] || (postings[id] = [])).push(order);
-      return {...r, order, seq, titleIds: title};
+      // Contents and index pages list every topic; rank them below the pages they point to.
+      const lines = String(r.text).split('\n').filter(l => l.trim());
+      const leaders = lines.filter(l => /(\.\s?){5,}\s*[0-9A-Z]+[-\u2013]?[0-9]*\s*$/.test(l)).length;
+      const weight = lines.length && leaders / lines.length > 0.25 ? 0.35 : 1;
+      return {...r, order, seq, titleIds: title, weight};
     });
     return {recs, ids, stems, postings, N: recs.length, avgLen: total / Math.max(1, recs.length)};
   }
@@ -162,6 +166,7 @@
         score += sumIdf * 0.5;
         score += sumIdf * 0.5 * Math.max(0, 1 - windowSize(positions) / 80);
       }
+      score *= rec.weight;
       hits.push({rec, score, allTerms, matchedTerms: query.terms.filter((_, k) => positions[k].length)});
     }
     hits.sort((a, b) => b.score - a.score || a.rec.order - b.rec.order);
