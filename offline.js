@@ -1,5 +1,5 @@
 "use strict";
-const OFFLINE_BUILD = "2026-11-09.8";
+const OFFLINE_BUILD = "2026-11-21.1";
 const diagnostic = window.offlineDiagnostic = {
   build: OFFLINE_BUILD,
   page: window.location ? window.location.origin + window.location.pathname : "unknown",
@@ -13,6 +13,11 @@ try { diagnostic.previousVerification = JSON.parse(window.localStorage.getItem("
 window.offlineReady = (async () => {
   let timer;
   try {
+    // Opened straight from files on disk: everything is already local, no worker or cache needed.
+    if (window.location && window.location.protocol === "file:") {
+      diagnostic.mode = "local files (no server, no cache)";
+      return {ok: true, local: true};
+    }
     if (!window.isSecureContext || !("serviceWorker" in navigator)) {
       throw new Error("Use HTTPS or localhost in a browser supporting offline apps.");
     }
