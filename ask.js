@@ -16,7 +16,11 @@
     return [...phrases, ...words].join(' ') || String(question);
   }
 
-  function documentTitle(rec) { return rec.title + (rec.page ? ', PDF page ' + rec.page + (rec.original ? ' of ' + rec.original.pages : '') : ''); }
+  function documentTitle(rec, pages) {
+    if (!rec.page) return rec.title;
+    const span = pages && pages.length > 1 ? `PDF pages ${pages[0]}-${pages[pages.length - 1]}` : 'PDF page ' + rec.page;
+    return rec.title + ', ' + span + (rec.original ? ' of ' + rec.original.pages : '');
+  }
 
   // Whole page when it fits, otherwise the passages around the matching words.
   function sourceText(S, rec, query, maxChars) {
@@ -28,20 +32,46 @@
     return out || text.slice(0, maxChars);
   }
 
-  // Pick the best pages, at most one per page and preferring pages with all the words.
-  function retrieve(S, index, question, {pages = 4, maxChars = 3500, filter = null} = {}) {
+  // Pick the best pages, preferring pages with all the words. Neighbouring pages of the
+  // same document are joined into one source in page order, and each source also carries
+  // the top of the following page: a procedure's time or dose table often sits on the
+  // next page (USDA lima and snap beans both start on one page and finish on the next).
+  function retrieve(S, index, question, {pages = 4, maxChars = 3500, nextChars = Math.round(maxChars * 0.4), filter = null} = {}) {
     const q = keywords(question);
     const {query, hits} = S.search(index, q, filter);
     const chosen = hits.slice(0, pages);
-    return {keywords: q, query, sources: chosen.map((h, i) => ({n: i + 1, rec: h.rec, text: sourceText(S, h.rec, query, maxChars)}))};
+    const key = r => r.doc + ':' + r.page;
+    const byPage = index.byPage || (index.byPage = new Map(index.recs.map(r => [key(r), r])));
+    const picked = new Set(chosen.map(h => key(h.rec)));
+    const used = new Set(), sources = [];
+    for (const h of chosen) {
+      if (used.has(key(h.rec))) continue;
+      let first = h.rec;
+      if (first.doc && first.page) while (picked.has(first.doc + ':' + (first.page - 1)) && !used.has(first.doc + ':' + (first.page - 1))) first = byPage.get(first.doc + ':' + (first.page - 1));
+      const run = [first];
+      while (first.doc && first.page && picked.has(first.doc + ':' + (run[run.length - 1].page + 1))) run.push(byPage.get(first.doc + ':' + (run[run.length - 1].page + 1)));
+      run.forEach(r => used.add(key(r)));
+      const parts = run.map(r => ({page: r.page, text: sourceText(S, r, query, maxChars)}));
+      const src = {n: sources.length + 1, rec: first, pages: run.map(r => r.page), parts, text: parts.map(p => p.text).join('\n\n')};
+      const last = run[run.length - 1];
+      const next = last.doc && last.page ? byPage.get(last.doc + ':' + (last.page + 1)) : null;
+      if (next && nextChars > 0) {
+        src.next = {page: next.page, text: S.normalize(next.text).replace(/[ \t]+\n/g, '\n').replace(/\n{3,}/g, '\n\n').trim().slice(0, nextChars)};
+      }
+      sources.push(src);
+    }
+    return {keywords: q, query, sources};
   }
 
   function formatSource(src) {
     const rec = src.rec, o = rec.original || {};
-    const lines = [`[${src.n}] ${documentTitle(rec)}` + (o.edition ? ` (${o.edition})` : '')];
+    const lines = [`[${src.n}] ${documentTitle(rec, src.pages)}` + (o.edition ? ` (${o.edition})` : '')];
     if (o.caution) lines.push('Document caution: ' + o.caution);
     if (rec.layout) lines.push('(For the assistant only, do not repeat: machine-extracted text. Tables may be scrambled into nearby lines, so numbers in tables may belong to a different row. Only state numbers that appear in sentences; for table values, tell the reader to check the original page.)');
-    lines.push('---', src.text, '---');
+    if (src.parts && src.parts.length > 1) for (const part of src.parts) lines.push(`--- PDF page ${part.page} ---`, part.text);
+    else lines.push('---', src.text);
+    if (src.next) lines.push(`--- top of the next page (PDF page ${src.next.page}), cite as [${src.n}] page ${src.next.page} ---`, src.next.text);
+    lines.push('---');
     return lines.join('\n');
   }
 
@@ -51,6 +81,7 @@
     'If the sources do not answer the question, say so plainly and suggest what to search for instead. Never fill gaps from memory.',
     'For food safety, medical care, medicines, doses, water treatment or anything that could hurt someone: give the exact figures only when a source states them, say which source and page, and tell the reader to confirm on that original page.',
     'Repeat any "Document caution" that applies to your answer.',
+    'A page may hold several tables for different foods or conditions, and a table may continue on the next page. Use a number only from a table whose title names exactly the item asked about (for example "Snap and Italian Beans", not "Lima Beans"); if no table names it, say so.',
     'Be concise and practical. Use short steps or bullet points where they help.'
   ].join(' ');
 

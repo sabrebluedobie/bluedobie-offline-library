@@ -46,10 +46,24 @@ const TOOLS = [
 function searchLibrary({query, max_results = 4, topic}) {
   if (!query || !String(query).trim()) throw Error('query is required');
   const pages = Math.max(1, Math.min(6, Number(max_results) || 4));
-  const filter = topic ? r => r.original && r.original.topic.toLowerCase() === String(topic).toLowerCase() : null;
-  const {keywords, sources} = A.retrieve(S, index, query, {pages, maxChars: 3500, filter});
-  if (!sources.length) return `No pages matched "${keywords}". Try other words, or list_documents to see what the library covers.`;
-  return sources.map(s => A.formatSource(s) + `\n(document_id: ${s.rec.doc}, page: ${s.rec.page})`).join('\n\n') + FOOTER;
+  // Topics match loosely ("canning" finds "Food: canning, storage & raising"); a topic
+  // that matches nothing, or that leaves no results, falls back to the whole library.
+  let note = '';
+  let filter = null;
+  if (topic && String(topic).trim()) {
+    const want = String(topic).toLowerCase().match(/[a-z]+/g) || [];
+    const topics = [...new Set(docs.map(d => d.topic))].filter(t => want.some(w => w.length > 2 && t.toLowerCase().includes(w)));
+    if (topics.length) filter = r => r.original && topics.includes(r.original.topic);
+    else note = `(No topic matches "${topic}", so the whole library was searched.)\n\n`;
+  }
+  let result = A.retrieve(S, index, query, {pages, maxChars: 3500, filter});
+  if (filter && !result.sources.length) {
+    result = A.retrieve(S, index, query, {pages, maxChars: 3500});
+    note = `(Nothing matched within topic "${topic}", so the whole library was searched.)\n\n`;
+  }
+  const {keywords, sources} = result;
+  if (!sources.length) return `No pages matched "${keywords}". Try fewer or different words, or list_documents to see what the library covers.`;
+  return note + sources.map(s => A.formatSource(s) + `\n(document_id: ${s.rec.doc}, ${s.pages && s.pages.length > 1 ? 'pages: ' + s.pages.join(', ') : 'page: ' + s.rec.page}${s.next ? `; includes the top of page ${s.next.page}` : ''})`).join('\n\n') + FOOTER;
 }
 
 function readPage({document_id, page}) {

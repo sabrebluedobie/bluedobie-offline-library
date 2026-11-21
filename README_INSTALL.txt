@@ -48,6 +48,8 @@ SEARCH
 - Ranking favours rare words over common ones (so "venison" counts for more than
   "canning"), pages with all your words, and words close together.
 - Narrow the search with the menu: a whole topic, or one document.
+- A few everyday words also find the documents' own terms: green, string or wax beans
+  find USDA "snap beans"; deer or elk find venison; ham radio finds amateur radio.
 - Documents with known problems (for example outdated CPR advice) show a caution on every
   result.
 - Each result is one original PDF page, with its page number (and printed page where
@@ -94,6 +96,11 @@ iPhone/iPad (Locally): type the question in "Ask Gemma" and press "Copy for Loca
 copies the question, answering rules and the 3 best pages (shortened to suit phone
 models), then open Locally, paste into a new chat and send. Locally has no way for a web
 page to send it questions directly.
+
+Pages given to Gemma: neighbouring pages are sent together in page order, plus the top of
+the next page, because a canning procedure's time table often sits on the following page.
+After updating this folder, restart LM Studio (or turn the offline-library tool off and on)
+so its chat tool loads the new version.
 
 Answers can still be wrong or incomplete. Always check figures for food safety, medical
 care, doses and water treatment on the cited original page.

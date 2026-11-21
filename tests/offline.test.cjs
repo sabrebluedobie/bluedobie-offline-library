@@ -199,8 +199,8 @@ test('questions become keywords and the right library pages',()=>{
   assert.equal(A.keywords('How long do I pressure can ground venison in quart jars?'),'pressure ground venison quart jars');
   assert.equal(A.keywords('what about "weighted gauge" canners'),'"weighted gauge" canners');
   const r=A.retrieve(S,index,'How long do I pressure can ground venison in quart jars at 800 feet?',{pages:4,maxChars:3500});
-  assert.equal(r.sources[0].rec.id,'usda-5-page-6');assert.equal(r.sources.length,4);
-  for(const s of r.sources)assert.ok(s.text.length<=3500&&s.text.length>100);
+  assert.equal(r.sources[0].rec.doc,'usda-5');assert.ok(r.sources[0].pages.includes(6));assert.ok(r.sources.length>=2&&r.sources.length<=4);
+  for(const s of r.sources)for(const p of s.parts)assert.ok(p.text.length<=3500&&p.text.length>100);
   assert.ok(A.retrieve(S,index,'How do I treat frostbite?').sources.some(s=>s.rec.doc==='cdc-extreme-cold'||s.rec.doc==='fema-cert-manual'));
 });
 test('prompts keep the model to the numbered pages, with cautions and table warnings',()=>{
@@ -246,4 +246,19 @@ test('LM Studio tool server answers MCP requests over stdio',async()=>{
   assert.match(by[4].result.content[0].text,/venison/i);
   assert.equal(by[5].result.isError,true);
   assert.equal(by[6].error.code,-32601);
+});
+test('green and lima bean questions get their own tables, joined with neighbouring pages',()=>{
+  const {S,A,index}=loadAsk();
+  const green=A.retrieve(S,index,'canning time for green beans in pints at 500 feet weighted gauge');
+  const g=green.sources.find(s=>s.rec.doc==='usda-4'&&(s.pages.includes(9)||(s.next&&s.next.page===9)));assert.ok(g,'snap bean table page 9 must be included');
+  assert.match(A.formatSource(g),/Snap and Italian Beans/);
+  const lima=A.retrieve(S,index,'lima beans canning time pints');
+  assert.deepEqual([...lima.sources[0].pages],[7,8]);assert.match(A.formatSource(lima.sources[0]),/--- PDF page 7 ---[\s\S]*--- PDF page 8 ---[\s\S]*Lima Beans/);
+  assert.equal(JSON.stringify(S.parseQuery('green beans').alts),JSON.stringify({green:['green','snap']}));
+  assert.match(A.messages('q',green.sources)[0].content,/not "Lima Beans"/);
+});
+test('LM Studio tool falls back to the whole library when a topic name is loose or wrong',()=>{
+  const lib=require('../tools/library-mcp.cjs');
+  assert.match(lib.searchLibrary({query:'green beans pints pressure',topic:'canning'}),/Snap and Italian Beans/);
+  const out=lib.searchLibrary({query:'frostbite',topic:'nonsense-topic'});assert.match(out,/whole library was searched/);assert.match(out,/\[1\]/);
 });

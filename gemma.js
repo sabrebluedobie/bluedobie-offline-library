@@ -94,7 +94,8 @@
       title.textContent = `[${s.n}] ${rec.title}`;
       const where = document.createElement('div');
       where.className = 'meta';
-      where.textContent = rec.page ? `PDF page ${rec.page}${rec.original ? ' of ' + rec.original.pages : ''}` : '';
+      const span = s.pages && s.pages.length > 1 ? `PDF pages ${s.pages[0]}–${s.pages[s.pages.length - 1]}` : `PDF page ${rec.page}`;
+      where.textContent = rec.page ? span + (rec.original ? ' of ' + rec.original.pages : '') + (s.next ? ` (plus the top of page ${s.next.page})` : '') : '';
       card.append(title, where);
       if (rec.original && rec.original.caution) {
         const c = document.createElement('p');

@@ -35,6 +35,15 @@
     return out;
   }
 
+  // Everyday words the source documents phrase differently. When the left side appears
+  // in a search, the right side counts as a match too (USDA says "snap beans", not
+  // "green beans").
+  const SYNONYMS = [
+    ['green beans', 'snap beans'], ['string beans', 'snap beans'], ['wax beans', 'snap beans'],
+    ['deer', 'venison'], ['elk', 'venison'], ['ground beef', 'ground meat'], ['hamburger', 'ground'],
+    ['ham radio', 'amateur radio'], ['bleeding', 'hemorrhage']
+  ].map(([from, to]) => [tokens(from).map(t => t.stem), tokens(to).map(t => t.stem)]);
+
   // "weighted gauge" venison -> phrase [weight, gaug] + term venison
   function parseQuery(q) {
     const phrases = [], terms = [];
@@ -43,10 +52,18 @@
       if (p.length > 1) phrases.push(p); else if (p.length === 1) terms.push(p[0]);
       return ' ';
     });
+    const ordered = tokens(rest).map(t => t.stem);
     for (const t of tokens(rest)) if (t.word.length > 1 || /\d/.test(t.word)) terms.push(t.stem);
     const uniqueTerms = [...new Set(terms)];
-    const marks = new Set([...uniqueTerms, ...phrases.flat()]);
-    return {terms: uniqueTerms, phrases, marks, empty: !uniqueTerms.length && !phrases.length};
+    const alts = {};
+    for (const [from, to] of SYNONYMS) {
+      for (let i = 0; i + from.length <= ordered.length; i++) {
+        if (!from.every((st, k) => ordered[i + k] === st)) continue;
+        from.forEach((st, k) => { const alt = to[Math.min(k, to.length - 1)]; if (alt !== st && uniqueTerms.includes(st)) (alts[st] = alts[st] || [st]).includes(alt) || alts[st].push(alt); });
+      }
+    }
+    const marks = new Set([...uniqueTerms, ...phrases.flat(), ...Object.values(alts).flat()]);
+    return {terms: uniqueTerms, alts, phrases, marks, empty: !uniqueTerms.length && !phrases.length};
   }
 
   // ---- Compact index ----
@@ -117,11 +134,15 @@
     const query = typeof q === 'string' ? parseQuery(q) : q;
     if (query.empty) return {query, hits: []};
     const {recs, ids, postings, N, avgLen} = index;
-    const termIds = query.terms.map(t => ids.has(t) ? ids.get(t) : -1);
+    // Each term matches its own stem or any synonym.
+    const termAlts = query.terms.map(t => ((query.alts || {})[t] || [t]).filter(x => ids.has(x)).map(x => ids.get(x)));
+    const idToTerm = new Map();
+    termAlts.forEach((list, k) => list.forEach(id => { if (!idToTerm.has(id)) idToTerm.set(id, k); }));
     const phraseIds = query.phrases.map(p => p.map(t => ids.has(t) ? ids.get(t) : -1));
     if (phraseIds.some(p => p.includes(-1))) return {query, hits: []};
     const idf = id => { const df = postings[id] ? postings[id].length : 0; return Math.log(1 + (N - df + 0.5) / (df + 0.5)); };
-    const termIdf = termIds.map(id => id < 0 ? 0 : idf(id));
+    const dfOf = list => Math.min(N, list.reduce((n, id) => n + (postings[id] ? postings[id].length : 0), 0));
+    const termIdf = termAlts.map(list => { if (!list.length) return 0; const df = dfOf(list); return Math.log(1 + (N - df + 0.5) / (df + 0.5)); });
     const sumIdf = termIdf.reduce((a, b) => a + b, 0) || 1;
 
     let candidates;
@@ -130,7 +151,7 @@
       candidates = postings[rarest] || [];
     } else {
       const set = new Set();
-      for (const id of termIds) if (id >= 0 && postings[id]) for (const r of postings[id]) set.add(r);
+      for (const list of termAlts) for (const id of list) if (postings[id]) for (const r of postings[id]) set.add(r);
       candidates = [...set];
     }
 
@@ -147,22 +168,22 @@
         phraseCount += c;
       }
       if (!phraseOk) continue;
-      const positions = termIds.map(() => []);
-      if (termIds.length) for (let i = 0; i < seq.length; i++) { const k = termIds.indexOf(seq[i]); if (k >= 0) positions[k].push(i); }
+      const positions = termAlts.map(() => []);
+      if (termAlts.length) for (let i = 0; i < seq.length; i++) { const k = idToTerm.get(seq[i]); if (k !== undefined) positions[k].push(i); }
       const matched = positions.filter(p => p.length).length;
       if (!matched && !phraseIds.length) continue;
       const norm = 1.2 * (0.25 + 0.75 * seq.length / avgLen);
       let score = 0;
       positions.forEach((p, k) => {
         if (p.length) score += termIdf[k] * (p.length * 2.2) / (p.length + norm);
-        if (termIds[k] >= 0 && rec.titleIds.has(termIds[k])) score += termIdf[k] * 0.3;
+        if (termAlts[k].some(id => rec.titleIds.has(id))) score += termIdf[k] * 0.3;
       });
       if (phraseIds.length) {
         const pIdf = phraseIds.flat().reduce((a, id) => a + idf(id), 0);
         score += pIdf * (1 + Math.min(3, phraseCount) * 0.2);
       }
-      const allTerms = matched === termIds.length;
-      if (allTerms && termIds.length > 1) {
+      const allTerms = matched === termAlts.length;
+      if (allTerms && termAlts.length > 1) {
         score += sumIdf * 0.5;
         score += sumIdf * 0.5 * Math.max(0, 1 - windowSize(positions) / 80);
       }
@@ -179,7 +200,7 @@
   }
 
   function isMatch(stems, i, query) {
-    if (query.terms.includes(stems[i])) return true;
+    if (query.terms.includes(stems[i]) || Object.values(query.alts || {}).some(list => list.includes(stems[i]))) return true;
     for (const p of query.phrases) for (let k = 0; k < p.length; k++) if (i - k >= 0 && phraseAtStems(stems, p, i - k)) return true;
     return false;
   }
