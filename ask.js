@@ -40,7 +40,7 @@
     const rec = src.rec, o = rec.original || {};
     const lines = [`[${src.n}] ${documentTitle(rec)}` + (o.edition ? ` (${o.edition})` : '')];
     if (o.caution) lines.push('Document caution: ' + o.caution);
-    if (rec.layout) lines.push('Note: machine-extracted text. Tables may be scrambled into nearby lines, so numbers may belong to a different row. Do not state numbers from tables in this source; tell the reader to check the original page.');
+    if (rec.layout) lines.push('(For the assistant only, do not repeat: machine-extracted text. Tables may be scrambled into nearby lines, so numbers in tables may belong to a different row. Only state numbers that appear in sentences; for table values, tell the reader to check the original page.)');
     lines.push('---', src.text, '---');
     return lines.join('\n');
   }
@@ -50,7 +50,7 @@
     'Cite every fact with its source number in square brackets, like [2].',
     'If the sources do not answer the question, say so plainly and suggest what to search for instead. Never fill gaps from memory.',
     'For food safety, medical care, medicines, doses, water treatment or anything that could hurt someone: give the exact figures only when a source states them, say which source and page, and tell the reader to confirm on that original page.',
-    'Repeat any document caution that applies to your answer.',
+    'Repeat any "Document caution" that applies to your answer.',
     'Be concise and practical. Use short steps or bullet points where they help.'
   ].join(' ');
 

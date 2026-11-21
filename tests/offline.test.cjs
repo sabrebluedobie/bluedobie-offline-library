@@ -219,6 +219,12 @@ test('Ask Gemma talks only to the local LM Studio server and lists the pages it 
   assert.match(g,/showSources\(r\)/);assert.match(g,/check the pages below/);
   assert.match(source('index.html'),/id="ask-panel"/);
 });
+test('two-column prose pages are read in column order, tables are left alone',()=>{
+  const {twoColumns}=require('../tools/add-originals.cjs');const lib=JSON.parse(source('library.json'));
+  const page=(d,p)=>lib.find(r=>r.originalId===d&&r.pdfPage===p);
+  const t=page('twdb-rainwater-manual',13);assert.match(t.extraction,/reading order/);assert.match(t.text.replace(/\s+/g,' '),/divert a minimum of 10 gallons for every 1,000 square feet/);
+  for(const [d,p] of [['usda-6',12],['usda-7',5],['army-atp-4-25-12',98],['army-atp-4-02-11',98],['fema-cert-manual',20]]){const r=page(d,p);assert.doesNotMatch(r.extraction,/reading order/,d+' '+p);assert.equal(twoColumns(r.text),false,d+' '+p)}
+});
 test('LM Studio tool server answers MCP requests over stdio',async()=>{
   const {spawn}=require('node:child_process');
   const p=spawn(process.execPath,[path.join(root,'tools/library-mcp.cjs')]);

@@ -55,6 +55,8 @@
       const info = await (await lm('/api/v0/models')).json();
       context = (info.data.find(m => m.id === model) || {}).loaded_context_length || 0;
     } catch (_) {}
+    // Not loaded yet (LM Studio loads it on first use): reuse the size seen last time.
+    if (context) store.set('context-' + model, String(context)); else context = Number(store.get('context-' + model, 0));
     const budget = context >= 12000 ? {pages: 5, maxChars: 3500} : context >= 7000 ? {pages: 4, maxChars: 2500} : {pages: 3, maxChars: 1800};
     return {model, context, ...budget};
   }
