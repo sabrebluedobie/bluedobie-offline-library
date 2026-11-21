@@ -63,11 +63,11 @@ test('original verifier accepts exact PDF and rejects partial or altered bytes',
 test('every local original matches its manifest size and hash',()=>{for(const d of JSON.parse(source('originals.json'))){const data=fs.readFileSync(path.join(root,d.path));assert.equal(data.length,d.bytes);assert.equal(require('node:crypto').createHash('sha256').update(data).digest('hex'),d.sha256)}});
 test('worker never duplicates original PDFs in the shell cache',()=>{assert.doesNotMatch(source('sw.js').split('const assetURLs')[0],/originals\/.*pdf/)});
 test('activation removes old app-shell copies but never saved original PDFs',async()=>{
-  const handlers={},names=new Set(['bluedobie-library-static-v10','bluedobie-library-static-v11','bluedobie-library-static-v12','bluedobie-originals-v1','other-app']);
+  const handlers={},current=source('sw.js').match(/CACHE_PREFIX \+ '(v\d+)'/)[1],names=new Set(['bluedobie-library-static-v10','bluedobie-library-static-v11','bluedobie-library-static-v13','bluedobie-library-static-'+current,'bluedobie-originals-v1','other-app']);
   const caches={keys:async()=>[...names],delete:async n=>names.delete(n),open:async()=>({})};
   vm.runInNewContext(source('sw.js'),{URL,Response,Request,caches,self:{registration:{scope:'https://example.test/'},addEventListener:(n,f)=>handlers[n]=f,skipWaiting:async()=>{},clients:{claim:async()=>{}}}});
   let p;handlers.activate({waitUntil:x=>p=x});await p;
-  assert.deepEqual([...names].sort(),['bluedobie-library-static-v12','bluedobie-originals-v1','other-app']);
+  assert.deepEqual([...names].sort(),['bluedobie-library-static-'+current,'bluedobie-originals-v1','other-app']);
 });
 
 test('release includes exactly the complete USDA set and no held sources',()=>{const a=JSON.parse(source('originals.json')).filter(d=>Number.isInteger(d.guide));assert.deepEqual(a.map(d=>d.guide).sort((a,b)=>a-b),[0,1,2,3,4,5,6,7]);assert.equal(a.length,8);for(const d of a)assert.match(d.source,/^https:\/\/nchfp\.uga\.edu\/papers\/guide\//)});
@@ -92,7 +92,7 @@ test('unreliable page extraction is shown as a page picture, labelled, and never
  assert.match(source('viewer.js'),/validPage/);
 });
 
-test('reviewed reference release excludes held material and retains CDC notice',()=>{const docs=JSON.parse(source('originals.json')).filter(d=>!Number.isInteger(d.guide));assert.deepEqual(docs.map(d=>d.id).sort(),['cdc-emergency-water','cdc-food-power-outage','cdc-handwashing','cdc-shelter-health','cdc-wound-care','usgs-map-and-compass']);for(const d of docs){assert.ok(d.sourceReview);if(d.id.startsWith('cdc-'))assert.match(d.publicationNotice,/free of charge.*does not imply endorsement/)}const pages=JSON.parse(source('library.json')).filter(p=>p.pdfPage&&!p.originalId.startsWith('usda-'));assert.equal(pages.length,7);for(const p of pages){const d=docs.find(d=>d.id===p.originalId);assert.equal(p.sourceSha256,d.sha256);assert.ok(p.pdfPage<=d.pages)}});
+test('reviewed reference release excludes held material and retains CDC notice',()=>{const docs=JSON.parse(source('originals.json')).filter(d=>!Number.isInteger(d.guide)&&!['cdc-diabetes-emergencies','cdc-emergency-insulin','cdc-diabetic-ketoacidosis','fda-emergency-insulin','fda-insulin-products'].includes(d.id));assert.deepEqual(docs.map(d=>d.id).sort(),['cdc-emergency-water','cdc-food-power-outage','cdc-handwashing','cdc-shelter-health','cdc-wound-care','ifrc-shelter-safety','usgs-map-and-compass']);for(const d of docs){assert.ok(d.sourceReview);if(d.id.startsWith('cdc-'))assert.match(d.publicationNotice,/free of charge.*does not imply endorsement/)}const pages=JSON.parse(source('library.json')).filter(p=>p.pdfPage&&docs.some(d=>d.id===p.originalId));assert.equal(pages.length,65);for(const p of pages){const d=docs.find(d=>d.id===p.originalId);assert.equal(p.sourceSha256,d.sha256);assert.ok(p.pdfPage<=d.pages)}});
 
 test('offline PDF renderer has bounded page controls and bundled assets',()=>{assert.doesNotMatch(source('viewer.html'),/<iframe/);for(const id of ['previous','next','go-page','pdf-canvas'])assert.ok(source('viewer.html').includes('id="'+id+'"'));assert.match(source('sw.js'),/vendor\/pdfjs\/pdf.worker.min.mjs/);assert.match(source('pagepic.js'),/isEvalSupported: false/);});
 
@@ -106,7 +106,7 @@ test('every original page record points at a real page and carries no damaged ch
   const docs=new Map(JSON.parse(source('originals.json')).map(d=>[d.id,d]));const pages=loadPages();
   for(const p of pages){const d=docs.get(p.doc);assert.ok(d,p.id);assert.ok(p.page>=1&&p.page<=d.pages,p.id);assert.doesNotMatch(p.text,/[\ufffd\u00ad]/,p.id);assert.equal(typeof p.layout,'boolean')}
   for(const g of ['usda-1','usda-2','usda-3','usda-4','usda-5'])assert.ok(pages.filter(p=>p.doc===g&&!p.layout).length>=10,g);
-  assert.equal(pages.filter(p=>p.layout).length,66);
+  assert.equal(pages.filter(p=>p.layout).length,JSON.parse(source('library.json')).filter(p=>Number.isInteger(p.pdfPage)).length);
 });
 test('search matches whole words with plural and ending variants',()=>{
   const S=loadSearch();
@@ -147,3 +147,15 @@ test('every script and stylesheet the pages load is precached for offline use',(
 test('the app asks the browser to keep its storage and saves every original automatically',()=>{
   const o=source('originals.js');assert.match(o,/navigator\.storage\?\.persist\?\.\(\)/);assert.match(o,/saveEverything\(\);\s*\}\)\(\);\s*$/);
 });
+
+test('IFRC handbook keeps noncommercial attribution and page-linked search',()=>{
+ const docs=JSON.parse(source('originals.json')),d=docs.find(d=>d.id==='ifrc-shelter-safety');
+ assert.equal(d.pages,62);assert.match(d.rights,/noncommercial/);assert.match(d.rights,/2011/);assert.match(d.source,/^https:\/\/www.ifrc.org\//);
+ const pages=JSON.parse(source('library.json')).filter(p=>p.originalId===d.id);
+ assert.equal(pages.length,58);assert.equal(new Set(pages.map(p=>p.pdfPage)).size,58);
+ for(const p of pages){assert.ok(p.pdfPage>=1&&p.pdfPage<=62);assert.equal(p.sourceSha256,d.sha256);assert.equal(p.source,d.source);assert.ok(p.text.trim());assert.match(p.extraction,/locator/)}
+ for(const term of ['earthquake','flood','fire','wind'])assert.ok(pages.some(p=>p.text.toLowerCase().includes(term)));
+ assert.match(source('index.html'),/noncommercial use with attribution/);
+});
+
+ test('diabetes references preserve provenance and safe page locators',()=>{const ds=JSON.parse(source('originals.json')).filter(d=>['cdc-diabetes-emergencies','cdc-emergency-insulin','cdc-diabetic-ketoacidosis','fda-emergency-insulin','fda-insulin-products'].includes(d.id));assert.equal(ds.length,5);const ps=JSON.parse(source('library.json')).filter(p=>ds.some(d=>d.id===p.originalId));assert.equal(ps.length,33);for(const d of ds){assert.match(d.sourceReview,/product-specific/);assert.match(d.publicationNotice,/does not imply endorsement/)}for(const p of ps){const d=ds.find(d=>d.id===p.originalId);assert.ok(p.pdfPage>=1&&p.pdfPage<=d.pages);assert.equal(p.sourceSha256,d.sha256);assert.match(p.extraction,/locator/);}});
