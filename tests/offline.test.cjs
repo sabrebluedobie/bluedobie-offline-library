@@ -7,17 +7,17 @@ const root=path.join(__dirname,'..');
 const source=name=>fs.readFileSync(path.join(root,name),'utf8');
 function worker({fail=false}={}) {
   const handlers={}, files=new Map();let network=0;
-  const cache={match:async key=>files.get(typeof key==='string'?key:key.url),addAll:async urls=>{if(fail)throw Error('offline');for(const u of urls)files.set(u,{ok:true,url:u})},put:async(k,v)=>files.set(k.url||k,v)};
+  const cache={match:async key=>files.get(typeof key==='string'?key:key.url),addAll:async urls=>{if(fail)throw Error('offline');for(const u of urls){assert.equal(u.cache,'reload');files.set(u.url,{ok:true,url:u.url})}},put:async(k,v)=>files.set(k.url||k,v)};
   const scope='https://example.test/bluedobie-offline-library/';
-  vm.runInNewContext(source('sw.js'),{URL,Response,self:{registration:{scope},addEventListener:(n,f)=>handlers[n]=f,skipWaiting:async()=>{},clients:{claim:async()=>{}}},caches:{open:async()=>cache},fetch:async()=>{network++;throw Error('network unavailable')}});
+  vm.runInNewContext(source('sw.js'),{URL,Response,Request,self:{registration:{scope},addEventListener:(n,f)=>handlers[n]=f,skipWaiting:async()=>{},clients:{claim:async()=>{}}},caches:{open:async()=>cache},fetch:async()=>{network++;throw Error('network unavailable')}});
   const run=async(name,extra={})=>{let promise;handlers[name]({...extra,waitUntil:p=>promise=p,respondWith:p=>promise=p});return await promise};
   return {run,files,scope,network:()=>network};
 }
-test('install caches every shell asset and document payload',async()=>{const w=worker();await w.run('install');for(const f of ['index.html','offline.js','app.js','library.json'])assert.ok(w.files.has(w.scope+f));});
-test('offline cold navigation and library fetch do not need network',async()=>{const w=worker();await w.run('install');for(const req of [{url:w.scope,mode:'navigate',method:'GET'},{url:w.scope+'index.html?launch=home',mode:'navigate',method:'GET'},{url:w.scope+'library.json',mode:'cors',method:'GET'}])assert.ok((await w.run('fetch',{request:req})).ok);assert.equal(w.network(),0);});
+test('install caches every shell asset and document payload',async()=>{const w=worker();await w.run('install');for(const f of ['index.html','offline.js','app.js','search.js','pagepic.js','library-data.js','originals-data.js'])assert.ok(w.files.has(w.scope+f));});
+test('offline cold navigation and library fetch do not need network',async()=>{const w=worker();await w.run('install');for(const req of [{url:w.scope,mode:'navigate',method:'GET'},{url:w.scope+'index.html?launch=home',mode:'navigate',method:'GET'},{url:w.scope+'library-data.js',mode:'no-cors',method:'GET'}])assert.ok((await w.run('fetch',{request:req})).ok);assert.equal(w.network(),0);});
 test('failed install rejects rather than claiming offline readiness',async()=>{await assert.rejects(worker({fail:true}).run('install'));});
 test('cache checker reports incomplete offline cache honestly',async()=>{const w=worker({fail:true});let result;await w.run('message',{data:{type:'CHECK_OFFLINE'},ports:[{postMessage:r=>result=r}]});assert.equal(result.ok,false);});
-test('cache checker repairs missing assets when online',async()=>{const w=worker();let result;await w.run('message',{data:{type:'CHECK_OFFLINE',allowRepair:true},ports:[{postMessage:r=>result=r}]});assert.equal(result.ok,true);assert.ok(w.files.has(w.scope+'library.json'));});
+test('cache checker repairs missing assets when online',async()=>{const w=worker();let result;await w.run('message',{data:{type:'CHECK_OFFLINE',allowRepair:true},ports:[{postMessage:r=>result=r}]});assert.equal(result.ok,true);assert.ok(w.files.has(w.scope+'library-data.js'));});
 async function readiness({unsupported=false,registrationFails=false,complete=true,timeout=false,controlled=true,online=true,existingActive=false,existingPending=false}={}) {
   let registerCalls=0;
   const controller={postMessage:(data,ports)=>{if(!timeout)ports[0].peer.onmessage({data:{ok:complete}})}};
@@ -61,7 +61,14 @@ test('original verifier accepts exact PDF and rejects partial or altered bytes',
   await assert.rejects(verifyOriginal('<html>bad',item),/not a PDF/);
 });
 test('every local original matches its manifest size and hash',()=>{for(const d of JSON.parse(source('originals.json'))){const data=fs.readFileSync(path.join(root,d.path));assert.equal(data.length,d.bytes);assert.equal(require('node:crypto').createHash('sha256').update(data).digest('hex'),d.sha256)}});
-test('worker does not delete older caches or duplicate original PDFs in shell',()=>{assert.doesNotMatch(source('sw.js'),/caches\.delete/);assert.doesNotMatch(source('sw.js').split('const assetURLs')[0],/originals\/.*pdf/)});
+test('worker never duplicates original PDFs in the shell cache',()=>{assert.doesNotMatch(source('sw.js').split('const assetURLs')[0],/originals\/.*pdf/)});
+test('activation removes old app-shell copies but never saved original PDFs',async()=>{
+  const handlers={},current=source('sw.js').match(/CACHE_PREFIX \+ '(v\d+)'/)[1],names=new Set(['bluedobie-library-static-v10','bluedobie-library-static-v11','bluedobie-library-static-v13','bluedobie-library-static-'+current,'bluedobie-originals-v1','other-app']);
+  const caches={keys:async()=>[...names],delete:async n=>names.delete(n),open:async()=>({})};
+  vm.runInNewContext(source('sw.js'),{URL,Response,Request,caches,self:{registration:{scope:'https://example.test/'},addEventListener:(n,f)=>handlers[n]=f,skipWaiting:async()=>{},clients:{claim:async()=>{}}}});
+  let p;handlers.activate({waitUntil:x=>p=x});await p;
+  assert.deepEqual([...names].sort(),['bluedobie-library-static-'+current,'bluedobie-originals-v1','other-app']);
+});
 
 test('release includes exactly the complete USDA set and no held sources',()=>{const a=JSON.parse(source('originals.json')).filter(d=>Number.isInteger(d.guide));assert.deepEqual(a.map(d=>d.guide).sort((a,b)=>a-b),[0,1,2,3,4,5,6,7]);assert.equal(a.length,8);for(const d of a)assert.match(d.source,/^https:\/\/nchfp\.uga\.edu\/papers\/guide\//)});
 
@@ -76,16 +83,70 @@ test('new USDA page search records retain provenance and source page bounds',()=
  for(const p of pages){const d=docs.find(d=>d.id===p.originalId);assert.ok(d);assert.ok(p.pdfPage>=1&&p.pdfPage<=d.pages);assert.equal(p.sourceSha256,d.sha256);assert.equal(p.source,d.source);assert.ok(p.text.trim());}
  for(const [id,word] of [['usda-6','sauerkraut'],['usda-7','pectin'],['usda-0','canning']])assert.ok(pages.some(p=>p.originalId===id&&p.text.toLowerCase().includes(word)));
 });
-test('unreliable new page extraction is a locator, never copied safety instructions',()=>{
- assert.match(source('app.js'),/if\(!h.d.pdfPage\)actions.append\(copy\)/);
- assert.match(source('app.js'),/Extracted instructions are withheld/);
+test('unreliable page extraction is shown as a page picture, labelled, and never copied for AI',()=>{
+ const app=source('app.js');
+ assert.match(app,/if \(!rec\.layout\) \{\s*const copy/);
+ assert.match(app,/Extracted text near the match \(unverified\)/);
+ assert.match(app,/Tables can be scrambled/);
+ assert.match(app,/pictureFigure\(rec, true\)/);
  assert.match(source('viewer.js'),/validPage/);
 });
 
 test('reviewed reference release excludes held material and retains CDC notice',()=>{const docs=JSON.parse(source('originals.json')).filter(d=>!Number.isInteger(d.guide)&&!['cdc-diabetes-emergencies','cdc-emergency-insulin','cdc-diabetic-ketoacidosis','fda-emergency-insulin','fda-insulin-products'].includes(d.id));assert.deepEqual(docs.map(d=>d.id).sort(),['cdc-emergency-water','cdc-food-power-outage','cdc-handwashing','cdc-shelter-health','cdc-wound-care','ifrc-shelter-safety','usgs-map-and-compass']);for(const d of docs){assert.ok(d.sourceReview);if(d.id.startsWith('cdc-'))assert.match(d.publicationNotice,/free of charge.*does not imply endorsement/)}const pages=JSON.parse(source('library.json')).filter(p=>p.pdfPage&&docs.some(d=>d.id===p.originalId));assert.equal(pages.length,65);for(const p of pages){const d=docs.find(d=>d.id===p.originalId);assert.equal(p.sourceSha256,d.sha256);assert.ok(p.pdfPage<=d.pages)}});
 
-test('offline PDF renderer has bounded page controls and bundled assets',()=>{assert.doesNotMatch(source('viewer.html'),/<iframe/);for(const id of ['previous','next','go-page','pdf-canvas'])assert.ok(source('viewer.html').includes('id="'+id+'"'));assert.match(source('sw.js'),/vendor\/pdfjs\/pdf.worker.min.mjs/);assert.match(source('viewer.js'),/isEvalSupported:false/);});
+test('offline PDF renderer has bounded page controls and bundled assets',()=>{assert.doesNotMatch(source('viewer.html'),/<iframe/);for(const id of ['previous','next','go-page','pdf-canvas'])assert.ok(source('viewer.html').includes('id="'+id+'"'));assert.match(source('sw.js'),/vendor\/pdfjs\/pdf.worker.min.mjs/);assert.match(source('pagepic.js'),/isEvalSupported: false/);});
 
+// ---- Data build, search and local-file mode ----
+const built=require('../tools/build-data.cjs').build();
+function loadSearch(){const ctx={};vm.runInNewContext(source('search.js'),ctx);return ctx.LibrarySearch;}
+function loadPages(){const ctx={window:{}};vm.runInNewContext(source('library-data.js'),ctx);return ctx.window.LIBRARY_PAGES;}
+
+test('generated data scripts are up to date with library.json and originals.json',()=>{for(const [name,text] of Object.entries(built.files))assert.equal(source(name),text,name+' is stale: run node tools/build-data.cjs')});
+test('every original page record points at a real page and carries no damaged characters',()=>{
+  const docs=new Map(JSON.parse(source('originals.json')).map(d=>[d.id,d]));const pages=loadPages();
+  for(const p of pages){const d=docs.get(p.doc);assert.ok(d,p.id);assert.ok(p.page>=1&&p.page<=d.pages,p.id);assert.doesNotMatch(p.text,/[\ufffd\u00ad]/,p.id);assert.equal(typeof p.layout,'boolean')}
+  for(const g of ['usda-1','usda-2','usda-3','usda-4','usda-5'])assert.ok(pages.filter(p=>p.doc===g&&!p.layout).length>=10,g);
+  assert.equal(pages.filter(p=>p.layout).length,JSON.parse(source('library.json')).filter(p=>Number.isInteger(p.pdfPage)).length);
+});
+test('search matches whole words with plural and ending variants',()=>{
+  const S=loadSearch();
+  for(const [a,b] of [['jar','jars'],['pickle','pickling'],['pickles','pickled'],['canning','canned'],['tomato','tomatoes'],['berry','berries']])assert.equal(S.stem(a),S.stem(b),a+'/'+b);
+  const idx=[{id:'a',title:'A',text:'Pecans and a scanner.'},{id:'b',title:'B',text:'Can the jars.'}].map(r=>S.index(r));
+  assert.deepEqual([...S.search(idx,'can').hits.map(h=>h.rec.id)],['b']);
+  assert.deepEqual([...S.search(idx,'jar').hits.map(h=>h.rec.id)],['b']);
+});
+test('quoted phrases are required and ranked pages put all words first',()=>{
+  const S=loadSearch();const idx=loadPages().map((r,i)=>S.index({...r,order:i}));
+  const phrase=S.search(idx,'"weighted gauge"');assert.ok(phrase.hits.length>10);
+  for(const h of phrase.hits)assert.match(h.rec.text.toLowerCase().replace(/\s+/g,' '),/weighted[\s-]+gauge/);
+  const venison=S.search(idx,'venison quart');assert.equal(venison.hits[0].rec.doc,'usda-5');assert.ok(venison.hits[0].allTerms);
+  assert.equal(S.search(idx,'sauerkraut').hits[0].rec.doc,'usda-6');
+});
+test('results show short highlighted excerpts, safely escaped',()=>{
+  const S=loadSearch();const q=S.parseQuery('venison');
+  const rec=S.index({id:'x',title:'T',text:'line one\nline two\nGround venison <b>here</b>\nline four\nline five\nline six\nline seven'});
+  const ex=S.excerpts(rec,q);assert.equal(ex.length,1);assert.doesNotMatch(ex[0].text,/line seven/);
+  const html=S.highlightHTML(ex[0].text,q);assert.match(html,/<mark>venison<\/mark>/);assert.match(html,/&lt;b&gt;here/);assert.doesNotMatch(html,/<b>/);
+});
+test('opened from local files, the library is ready without a worker or cache',async()=>{
+  const context={window:{isSecureContext:false,location:{protocol:'file:',origin:'null',pathname:'/x/index.html'}},navigator:{},setTimeout,clearTimeout};
+  vm.runInNewContext(source('offline.js'),context);const r=await context.window.offlineReady;assert.equal(r.ok,true);assert.equal(r.local,true);
+  assert.match(source('app.js'),/if \(LOCAL_FILE\) return o\.path \+ '#page='/);
+  assert.match(source('viewer.js'),/location\.protocol==='file:'/);
+});
+test('data loads as plain scripts so index.html works straight from disk',()=>{
+  const html=source('index.html');
+  for(const f of ['originals-data.js','library-data.js','search.js'])assert.match(html,new RegExp('<script src="'+f.replace('.','\\.')+'"></script>'));
+  assert.doesNotMatch(source('app.js')+source('originals.js'),/fetch\('\.\/(library|originals)\.json'\)/);
+});
+test('every script and stylesheet the pages load is precached for offline use',()=>{
+  const assets=source('sw.js').match(/const ASSETS = \[([^\]]*)\]/)[1];
+  for(const page of ['index.html','viewer.html'])for(const m of source(page).matchAll(/(?:src|href)="([^"#?]+\.(?:js|css|webmanifest|png))"/g))assert.ok(assets.includes("'./"+m[1]+"'"),page+' needs '+m[1]);
+  assert.match(source('pagepic.js'),/import\('\.\/vendor\/pdfjs\/pdf\.min\.mjs'\)/);
+});
+test('the app asks the browser to keep its storage and saves every original automatically',()=>{
+  const o=source('originals.js');assert.match(o,/navigator\.storage\?\.persist\?\.\(\)/);assert.match(o,/saveEverything\(\);\s*\}\)\(\);\s*$/);
+});
 
 test('IFRC handbook keeps noncommercial attribution and page-linked search',()=>{
  const docs=JSON.parse(source('originals.json')),d=docs.find(d=>d.id==='ifrc-shelter-safety');
